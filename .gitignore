@@ -13,3 +13,16 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+
+# Intellij
+.idea
+
+# Terraform
+.terraform.lock.hcl
+
+# Lambda Binaries Zip files
+lambda/bin/*.zip
+
+# Mac
+.DS_Store
