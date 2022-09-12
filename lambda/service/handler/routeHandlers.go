@@ -10,7 +10,7 @@ import (
 func postGraphQueryRoute(request events.APIGatewayV2HTTPRequest, claims *Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	fmt.Println("Handling POST /graph/query request")
 
-	dbUri := "bolt-://10.11.1.51:7687"
+	dbUri := "bolt://10.11.1.51:7687"
 	driver, err := neo4j.NewDriver(dbUri, neo4j.BasicAuth("model_service_user", "8RY@BheMwUvNZ3", ""))
 	if err != nil {
 		panic(err)
