@@ -3,7 +3,7 @@ package models
 import (
 	"context"
 	"fmt"
-	"github.com/pennsieve/model-service-serverless/service/api/core"
+	"github.com/pennsieve/model-service-serverless/api/core"
 	"log"
 	"strings"
 )
@@ -24,16 +24,11 @@ func getModels(session core.Neo4jAPI, datasetId int, organizationId int) {
 	transaction, err := session.BeginTransaction(context.Background())
 	if err != nil {
 		log.Println(err)
-		return nil, err
 	}
 
 	result, err := transaction.Run(context.Background(),
 		"CREATE (a:Greeting) SET a.message = $message RETURN a.message + ', from node ' + id(a)",
 		map[string]any{"message": "hello, world"})
-
-	if err != nil {
-		return nil, err
-	}
 
 	fmt.Println(result)
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github.com/pennsieve/model-service-serverless/api/models"
 	"log"
 )
 
@@ -19,6 +20,8 @@ func getDatasetModelsRoute(request events.APIGatewayV2HTTPRequest, claims *Claim
 		AccessMode: neo4j.AccessModeWrite,
 	})
 	defer session.Close(context.Background())
+
+	models.getModels(session, datasetId, organizationId)
 
 	transaction, err := session.BeginTransaction(context.Background())
 	if err != nil {
