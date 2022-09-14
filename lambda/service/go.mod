@@ -2,16 +2,19 @@ module github.com/pennsieve/model-service-serverless/service
 
 go 1.18
 
+replace github.com/pennsieve/model-service-serverless => "../../../model-service-serverless"
+
 require (
 	github.com/aws/aws-lambda-go v1.34.1
 	github.com/aws/aws-sdk-go-v2 v1.16.14
+	github.com/aws/aws-sdk-go-v2/config v1.15.7
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.27.13
 	github.com/neo4j/neo4j-go-driver/v5 v5.0.0
+	github.com/pennsieve/model-service-serverless v0.0.0-20220914184935-9edde63a7b08
 	github.com/pennsieve/pennsieve-go-api v1.1.0
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/config v1.15.7 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.2 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.9.4 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.5 // indirect

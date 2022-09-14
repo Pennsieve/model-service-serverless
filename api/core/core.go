@@ -6,8 +6,6 @@ import (
 )
 
 type Neo4jAPI interface {
-	LastBookmarks() neo4j.Bookmarks
-	lastBookmark() string
 	BeginTransaction(ctx context.Context, configurers ...func(*neo4j.TransactionConfig)) (neo4j.ExplicitTransaction, error)
 	ExecuteRead(ctx context.Context, work neo4j.ManagedTransactionWork, configurers ...func(*neo4j.TransactionConfig)) (any, error)
 	ExecuteWrite(ctx context.Context, work neo4j.ManagedTransactionWork, configurers ...func(*neo4j.TransactionConfig)) (any, error)

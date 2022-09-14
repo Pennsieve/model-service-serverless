@@ -21,7 +21,7 @@ func getDatasetModelsRoute(request events.APIGatewayV2HTTPRequest, claims *Claim
 	})
 	defer session.Close(context.Background())
 
-	models.getModels(session, datasetId, organizationId)
+	models.GetModels(session, datasetId, organizationId)
 
 	transaction, err := session.BeginTransaction(context.Background())
 	if err != nil {
