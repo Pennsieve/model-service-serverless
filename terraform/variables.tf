@@ -10,6 +10,11 @@ variable "vpc_name" {}
 
 variable "domain_name" {}
 
+variable "neo4j_bolt_url" {}
+
+variable "neo4j_bolt_user" {
+  default = "model_service_user"
+}
 
 locals {
   domain_name = data.terraform_remote_state.account.outputs.domain_name

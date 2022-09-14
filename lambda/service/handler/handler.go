@@ -3,13 +3,41 @@ package handler
 import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/pennsieve/pennsieve-go-api/pkg/models/dataset"
 	"github.com/pennsieve/pennsieve-go-api/pkg/models/dbTable"
 	"github.com/pennsieve/pennsieve-go-api/pkg/models/organization"
 	"github.com/pennsieve/pennsieve-go-api/pkg/models/permissions"
 	"log"
 	"regexp"
+	"time"
 )
+
+var neo4jDriver neo4j.DriverWithContext
+
+// init runs on cold start of lambda and fetches variables and created neo4j driver.
+func init() {
+
+	// Get the Model-Service variables from SSM.
+	ssmVars, err := fetchSSMVariables()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	neo4jDriver, err = neo4j.NewDriverWithContext(*ssmVars.dbUri,
+		neo4j.BasicAuth(*ssmVars.neo4jUserName, *ssmVars.neo4jPassword, ""),
+		func(config *neo4j.Config) {
+			config.MaxConnectionPoolSize = 10
+			config.MaxConnectionLifetime = 5 * time.Minute
+			config.ConnectionAcquisitionTimeout = 10 * time.Second
+		})
+	if err != nil {
+		panic(err)
+	}
+
+	// We are not closing the driver to allow the driver to be used across lambda calls while lambda is hot. We will
+	// need to depend on neo4j to close stale connections after a time-out.
+}
 
 // Claims is an object containing claims and user info
 type Claims struct {
@@ -21,9 +49,9 @@ type Claims struct {
 }
 
 func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGatewayV2HTTPResponse, error) {
+	var err error
 
 	var apiResponse *events.APIGatewayV2HTTPResponse
-	var err error
 
 	r := regexp.MustCompile(`(?P<method>) (?P<pathKey>.*)`)
 	routeKeyParts := r.FindStringSubmatch(request.RouteKey)
@@ -32,6 +60,14 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 	claims := parseClaims(request)
 	authorized := false
 	switch routeKey {
+	case "/metadata/models":
+		switch request.RequestContext.HTTP.Method {
+		case "GET":
+			//	Return all models for a specific dataset
+			if authorized = hasRole(*claims, permissions.ViewGraphSchema); authorized {
+				apiResponse, err = getDatasetModelsRoute(request, claims)
+			}
+		}
 	case "/metadata/query":
 		switch request.RequestContext.HTTP.Method {
 		case "POST":
