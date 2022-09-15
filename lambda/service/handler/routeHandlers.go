@@ -13,39 +13,25 @@ import (
 func getDatasetModelsRoute(request events.APIGatewayV2HTTPRequest, claims *Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	fmt.Println("Handling GET /graph/models")
 
-	datasetId := 1715
-	organizationId := 19
+	//datasetId := 1715
+	//organizationId := 19
 
 	session := neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
-		AccessMode: neo4j.AccessModeWrite,
+		AccessMode: neo4j.AccessModeRead,
 	})
 	defer session.Close(context.Background())
 
-	models.GetModels(session, datasetId, organizationId)
-
-	transaction, err := session.BeginTransaction(context.Background())
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-
-	result, err := transaction.Run(context.Background(),
-		"CREATE (a:Greeting) SET a.message = $message RETURN a.message + ', from node ' + id(a)",
-		map[string]any{"message": "hello, world"})
-
+	results, err := models.GetModels(session, int(claims.datasetClaim.IntId), int(claims.orgClaim.IntId))
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println(result)
-
-	apiResponse := events.APIGatewayV2HTTPResponse{}
-
-	// CREATING API RESPONSE
-	responseBody := "Hello there."
-
-	jsonBody, _ := json.Marshal(responseBody)
-	apiResponse = events.APIGatewayV2HTTPResponse{Body: string(jsonBody), StatusCode: 200}
+	jsonBody, err := json.Marshal(results)
+	if err != nil {
+		return nil, err
+	}
+	log.Println(jsonBody)
+	apiResponse := events.APIGatewayV2HTTPResponse{Body: string(jsonBody), StatusCode: 200}
 
 	return &apiResponse, nil
 }
