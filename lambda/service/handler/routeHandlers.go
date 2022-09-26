@@ -7,65 +7,93 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/pennsieve/model-service-serverless/api/models"
-	"log"
+	"github.com/pennsieve/model-service-serverless/api/query"
+	"github.com/pennsieve/model-service-serverless/api/records"
+	"github.com/pennsieve/pennsieve-go-api/pkg/authorizer"
+	"github.com/pennsieve/pennsieve-go-api/pkg/models/gateway"
 )
 
-func getDatasetModelsRoute(request events.APIGatewayV2HTTPRequest, claims *Claims) (*events.APIGatewayV2HTTPResponse, error) {
-	fmt.Println("Handling GET /graph/models")
+func getDatasetModelsRoute(request events.APIGatewayV2HTTPRequest, claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
+	// Create database session and defer closing the session
+	session := neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
+		AccessMode: neo4j.AccessModeRead,
+	})
+	defer session.Close(context.Background())
 
-	//datasetId := 1715
-	//organizationId := 19
+	// Get the models from Neo4J
+	results, err := models.GetModels(session, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse response into JSON structure
+	jsonBody, err := json.Marshal(results)
+	if err != nil {
+		return nil, err
+	}
+	apiResponse := events.APIGatewayV2HTTPResponse{Body: string(jsonBody), StatusCode: 200}
+	return &apiResponse, nil
+}
+
+func postGraphQueryRoute(request events.APIGatewayV2HTTPRequest, claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
+	apiResponse := events.APIGatewayV2HTTPResponse{}
+
+	parsedRequestBody := query.QueryRequestBody{}
+	if err := json.Unmarshal([]byte(request.Body), &parsedRequestBody); err != nil {
+		message := "Error: Unable to parse body: " + fmt.Sprint(err)
+		apiResponse = events.APIGatewayV2HTTPResponse{
+			Body: gateway.CreateErrorMessage(message, 400), StatusCode: 400}
+		return &apiResponse, nil
+	}
 
 	session := neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
 		AccessMode: neo4j.AccessModeRead,
 	})
 	defer session.Close(context.Background())
 
-	results, err := models.GetModels(session, int(claims.datasetClaim.IntId), int(claims.orgClaim.IntId))
+	err := query.Query(session, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), parsedRequestBody)
+
 	if err != nil {
 		return nil, err
 	}
 
-	jsonBody, err := json.Marshal(results)
-	if err != nil {
-		return nil, err
-	}
-	log.Println(jsonBody)
-	apiResponse := events.APIGatewayV2HTTPResponse{Body: string(jsonBody), StatusCode: 200}
+	// CREATING API RESPONSE
+	responseBody := "Success"
+	jsonBody, _ := json.Marshal(responseBody)
+	apiResponse = events.APIGatewayV2HTTPResponse{Body: string(jsonBody), StatusCode: 200}
 
 	return &apiResponse, nil
 }
 
-func postGraphQueryRoute(request events.APIGatewayV2HTTPRequest, claims *Claims) (*events.APIGatewayV2HTTPResponse, error) {
-	fmt.Println("Handling POST /graph/query request")
+// postGraphRecordRelationshipRoute creates 1 or more relationships between existing records
+func postGraphRecordRelationshipRoute(request events.APIGatewayV2HTTPRequest, claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
+	apiResponse := events.APIGatewayV2HTTPResponse{}
+
+	parsedRequestBody := records.PostRecordRelationshipRequestBody{}
+	if err := json.Unmarshal([]byte(request.Body), &parsedRequestBody); err != nil {
+		message := "Error: Unable to parse body: " + fmt.Sprint(err)
+		apiResponse = events.APIGatewayV2HTTPResponse{
+			Body: gateway.CreateErrorMessage(message, 400), StatusCode: 400}
+		return &apiResponse, nil
+	}
 
 	session := neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
 		AccessMode: neo4j.AccessModeWrite,
 	})
 	defer session.Close(context.Background())
 
-	transaction, err := session.BeginTransaction(context.Background())
+	response, err := records.CreateRelationShips(session, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), claims.UserClaim.NodeId, parsedRequestBody)
 	if err != nil {
-		log.Println(err)
+		message := err.Error()
+		apiResponse = events.APIGatewayV2HTTPResponse{
+			Body: gateway.CreateErrorMessage(message, 400), StatusCode: 400}
+		return &apiResponse, nil
+
 		return nil, err
 	}
-
-	result, err := transaction.Run(context.Background(),
-		"CREATE (a:Greeting) SET a.message = $message RETURN a.message + ', from node ' + id(a)",
-		map[string]any{"message": "hello, world"})
-
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Println(result)
-
-	apiResponse := events.APIGatewayV2HTTPResponse{}
 
 	// CREATING API RESPONSE
-	responseBody := "Hello there."
-
-	jsonBody, _ := json.Marshal(responseBody)
+	jsonBody, _ := json.Marshal(response)
 	apiResponse = events.APIGatewayV2HTTPResponse{Body: string(jsonBody), StatusCode: 200}
 
 	return &apiResponse, nil
