@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github.com/pennsieve/model-service-serverless/api/store"
 	"github.com/pennsieve/pennsieve-go-api/pkg/authorizer"
 	"github.com/pennsieve/pennsieve-go-api/pkg/models/permissions"
 	"log"
@@ -48,13 +50,23 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 
 	claims := authorizer.ParseClaims(request.RequestContext.Authorizer.Lambda)
 	authorized := false
+
+	// Initiate NEO4j session
+	db := neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
+		AccessMode: neo4j.AccessModeRead,
+	})
+	defer db.Close(context.Background())
+
+	// Create GraphStore object with initiated db.
+	graphStore := store.NewGraphStore(db)
+
 	switch routeKey {
 	case "/metadata/models":
 		switch request.RequestContext.HTTP.Method {
 		case "GET":
 			//	Return all models for a specific dataset
 			if authorized = authorizer.HasRole(*claims, permissions.ViewGraphSchema); authorized {
-				apiResponse, err = getDatasetModelsRoute(request, claims)
+				apiResponse, err = getDatasetModelsRoute(graphStore, request, claims)
 			}
 		}
 	case "/metadata/query":
@@ -63,7 +75,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 			fmt.Println("Handling POST /graph/query request")
 			authorized = true
 			//if authorized = hasRole(*claims, permissions.CreateDeleteFiles); authorized {
-			apiResponse, err = postGraphQueryRoute(request, claims)
+			apiResponse, err = postGraphQueryRoute(graphStore, request, claims)
 			//}
 		}
 	case "/metadata/records/relationships":
@@ -71,7 +83,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 		case "POST":
 			fmt.Println("Handling POST /metadata/records/relationships")
 			if authorized = authorizer.HasRole(*claims, permissions.CreateDeleteRecord); authorized {
-				apiResponse, err = postGraphRecordRelationshipRoute(request, claims)
+				apiResponse, err = postGraphRecordRelationshipRoute(graphStore, request, claims)
 			}
 		}
 	}
