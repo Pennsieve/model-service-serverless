@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/pennsieve/model-service-serverless/api/models"
-	"github.com/pennsieve/model-service-serverless/api/store"
+	"github.com/pennsieve/model-service-serverless/api/service"
 	"github.com/pennsieve/pennsieve-go-api/pkg/authorizer"
 	"github.com/pennsieve/pennsieve-go-api/pkg/models/gateway"
 )
 
-func getDatasetModelsRoute(s store.GraphStore, request events.APIGatewayV2HTTPRequest, claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
+func getDatasetModelsRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	// Create database session and defer closing the session
 
 	// Get the models from Neo4J
-	results, err := s.GetModels(int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
+	results, err := s.GetDatasetModels(int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +29,8 @@ func getDatasetModelsRoute(s store.GraphStore, request events.APIGatewayV2HTTPRe
 	return &apiResponse, nil
 }
 
-func postGraphQueryRoute(s store.GraphStore, request events.APIGatewayV2HTTPRequest, claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
+func postGraphQueryRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	apiResponse := events.APIGatewayV2HTTPResponse{}
 
 	parsedRequestBody := models.QueryRequestBody{}
@@ -39,7 +41,7 @@ func postGraphQueryRoute(s store.GraphStore, request events.APIGatewayV2HTTPRequ
 		return &apiResponse, nil
 	}
 
-	err := s.Query(int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), parsedRequestBody)
+	_, err := s.QueryGraph(parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
 
 	if err != nil {
 		return nil, err
@@ -54,7 +56,8 @@ func postGraphQueryRoute(s store.GraphStore, request events.APIGatewayV2HTTPRequ
 }
 
 // postGraphRecordRelationshipRoute creates 1 or more relationships between existing records
-func postGraphRecordRelationshipRoute(s store.GraphStore, request events.APIGatewayV2HTTPRequest, claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
+func postGraphRecordRelationshipRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	apiResponse := events.APIGatewayV2HTTPResponse{}
 
 	parsedRequestBody := models.PostRecordRelationshipRequestBody{}
@@ -65,7 +68,7 @@ func postGraphRecordRelationshipRoute(s store.GraphStore, request events.APIGate
 		return &apiResponse, nil
 	}
 
-	response, err := s.CreateRelationShips(int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), claims.UserClaim.NodeId, parsedRequestBody)
+	response, err := s.CreateRelationships(parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), claims.UserClaim.NodeId)
 	if err != nil {
 		message := err.Error()
 		apiResponse = events.APIGatewayV2HTTPResponse{

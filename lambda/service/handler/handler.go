@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
+	"github.com/pennsieve/model-service-serverless/api/service"
 	"github.com/pennsieve/model-service-serverless/api/store"
 	"github.com/pennsieve/pennsieve-go-api/pkg/authorizer"
 	"github.com/pennsieve/pennsieve-go-api/pkg/models/permissions"
@@ -59,6 +60,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 
 	// Create GraphStore object with initiated db.
 	graphStore := store.NewGraphStore(db)
+	graphService := service.NewGraphService(graphStore)
 
 	switch routeKey {
 	case "/metadata/models":
@@ -66,7 +68,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 		case "GET":
 			//	Return all models for a specific dataset
 			if authorized = authorizer.HasRole(*claims, permissions.ViewGraphSchema); authorized {
-				apiResponse, err = getDatasetModelsRoute(graphStore, request, claims)
+				apiResponse, err = getDatasetModelsRoute(graphService, request, claims)
 			}
 		}
 	case "/metadata/query":
@@ -75,7 +77,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 			fmt.Println("Handling POST /graph/query request")
 			authorized = true
 			//if authorized = hasRole(*claims, permissions.CreateDeleteFiles); authorized {
-			apiResponse, err = postGraphQueryRoute(graphStore, request, claims)
+			apiResponse, err = postGraphQueryRoute(graphService, request, claims)
 			//}
 		}
 	case "/metadata/records/relationships":
@@ -83,7 +85,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 		case "POST":
 			fmt.Println("Handling POST /metadata/records/relationships")
 			if authorized = authorizer.HasRole(*claims, permissions.CreateDeleteRecord); authorized {
-				apiResponse, err = postGraphRecordRelationshipRoute(graphStore, request, claims)
+				apiResponse, err = postGraphRecordRelationshipRoute(graphService, request, claims)
 			}
 		}
 	}
