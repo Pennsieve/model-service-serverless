@@ -1,27 +1,21 @@
 package handler
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/pennsieve/model-service-serverless/api/models"
-	"github.com/pennsieve/model-service-serverless/api/query"
-	"github.com/pennsieve/model-service-serverless/api/records"
+	"github.com/pennsieve/model-service-serverless/api/service"
 	"github.com/pennsieve/pennsieve-go-api/pkg/authorizer"
 	"github.com/pennsieve/pennsieve-go-api/pkg/models/gateway"
 )
 
-func getDatasetModelsRoute(request events.APIGatewayV2HTTPRequest, claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
+func getDatasetModelsRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	// Create database session and defer closing the session
-	session := neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
-		AccessMode: neo4j.AccessModeRead,
-	})
-	defer session.Close(context.Background())
 
 	// Get the models from Neo4J
-	results, err := models.GetModels(session, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
+	results, err := s.GetDatasetModels(int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
 	if err != nil {
 		return nil, err
 	}
@@ -35,10 +29,11 @@ func getDatasetModelsRoute(request events.APIGatewayV2HTTPRequest, claims *autho
 	return &apiResponse, nil
 }
 
-func postGraphQueryRoute(request events.APIGatewayV2HTTPRequest, claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
+func postGraphQueryRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	apiResponse := events.APIGatewayV2HTTPResponse{}
 
-	parsedRequestBody := query.QueryRequestBody{}
+	parsedRequestBody := models.QueryRequestBody{}
 	if err := json.Unmarshal([]byte(request.Body), &parsedRequestBody); err != nil {
 		message := "Error: Unable to parse body: " + fmt.Sprint(err)
 		apiResponse = events.APIGatewayV2HTTPResponse{
@@ -46,12 +41,7 @@ func postGraphQueryRoute(request events.APIGatewayV2HTTPRequest, claims *authori
 		return &apiResponse, nil
 	}
 
-	session := neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
-		AccessMode: neo4j.AccessModeRead,
-	})
-	defer session.Close(context.Background())
-
-	err := query.Query(session, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), parsedRequestBody)
+	_, err := s.QueryGraph(parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
 
 	if err != nil {
 		return nil, err
@@ -66,10 +56,11 @@ func postGraphQueryRoute(request events.APIGatewayV2HTTPRequest, claims *authori
 }
 
 // postGraphRecordRelationshipRoute creates 1 or more relationships between existing records
-func postGraphRecordRelationshipRoute(request events.APIGatewayV2HTTPRequest, claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
+func postGraphRecordRelationshipRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	apiResponse := events.APIGatewayV2HTTPResponse{}
 
-	parsedRequestBody := records.PostRecordRelationshipRequestBody{}
+	parsedRequestBody := models.PostRecordRelationshipRequestBody{}
 	if err := json.Unmarshal([]byte(request.Body), &parsedRequestBody); err != nil {
 		message := "Error: Unable to parse body: " + fmt.Sprint(err)
 		apiResponse = events.APIGatewayV2HTTPResponse{
@@ -77,12 +68,7 @@ func postGraphRecordRelationshipRoute(request events.APIGatewayV2HTTPRequest, cl
 		return &apiResponse, nil
 	}
 
-	session := neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
-		AccessMode: neo4j.AccessModeWrite,
-	})
-	defer session.Close(context.Background())
-
-	response, err := records.CreateRelationShips(session, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), claims.UserClaim.NodeId, parsedRequestBody)
+	response, err := s.CreateRelationships(parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), claims.UserClaim.NodeId)
 	if err != nil {
 		message := err.Error()
 		apiResponse = events.APIGatewayV2HTTPResponse{
