@@ -8,6 +8,7 @@ import (
 	"github.com/pennsieve/model-service-serverless/api/service"
 	"github.com/pennsieve/pennsieve-go-api/pkg/authorizer"
 	"github.com/pennsieve/pennsieve-go-api/pkg/models/gateway"
+	"log"
 )
 
 func getDatasetModelsRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
@@ -41,15 +42,28 @@ func postGraphQueryRoute(s service.GraphService, request events.APIGatewayV2HTTP
 		return &apiResponse, nil
 	}
 
-	_, err := s.QueryGraph(parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
+	records, err := s.QueryGraph(parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
 
 	if err != nil {
-		return nil, err
+		switch err.(type) {
+		case *models.UnknownModelError:
+			apiResponse = events.APIGatewayV2HTTPResponse{
+				Body: gateway.CreateErrorMessage(err.Error(), 400), StatusCode: 400}
+		case *models.UnsupportedOperatorError:
+			apiResponse = events.APIGatewayV2HTTPResponse{
+				Body: gateway.CreateErrorMessage(err.Error(), 400), StatusCode: 400}
+		default:
+			log.Println(err)
+			apiResponse = events.APIGatewayV2HTTPResponse{
+				Body: gateway.CreateErrorMessage("Internal Server Error", 500), StatusCode: 500}
+		}
+
+		return &apiResponse, nil
+
 	}
 
 	// CREATING API RESPONSE
-	responseBody := "Success"
-	jsonBody, _ := json.Marshal(responseBody)
+	jsonBody, _ := json.Marshal(records)
 	apiResponse = events.APIGatewayV2HTTPResponse{Body: string(jsonBody), StatusCode: 200}
 
 	return &apiResponse, nil

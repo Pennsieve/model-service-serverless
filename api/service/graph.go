@@ -1,8 +1,6 @@
 package service
 
 import (
-	"encoding/json"
-	"github.com/aws/aws-lambda-go/events"
 	"github.com/pennsieve/model-service-serverless/api/models"
 	"github.com/pennsieve/model-service-serverless/api/store"
 )
@@ -10,7 +8,7 @@ import (
 type GraphService interface {
 	GetDatasetModels(datasetId int, organizationId int) ([]models.Model, error)
 	QueryGraph(parsedRequestBody models.QueryRequestBody, datasetId int,
-		organizationId int) (*events.APIGatewayV2HTTPResponse, error)
+		organizationId int) ([]models.Record, error)
 	CreateRelationships(parsedRequestBody models.PostRecordRelationshipRequestBody,
 		datasetId int, organizationId int, userNodeId string) ([]models.ShortRecordRelationShip, error)
 }
@@ -32,25 +30,24 @@ func (s *graphService) GetDatasetModels(datasetId int, organizationId int) ([]mo
 		return nil, err
 	}
 
-	return results, nil
+	var models []models.Model
+	for _, v := range results {
+		models = append(models, v)
+	}
+
+	return models, nil
 }
 
 func (s *graphService) QueryGraph(parsedRequestBody models.QueryRequestBody, datasetId int,
-	organizationId int) (*events.APIGatewayV2HTTPResponse, error) {
-	apiResponse := events.APIGatewayV2HTTPResponse{}
+	organizationId int) ([]models.Record, error) {
 
-	err := s.store.Query(datasetId, organizationId, parsedRequestBody)
+	nodes, err := s.store.Query(datasetId, organizationId, parsedRequestBody)
 
 	if err != nil {
 		return nil, err
 	}
 
-	// CREATING API RESPONSE
-	responseBody := "Success"
-	jsonBody, _ := json.Marshal(responseBody)
-	apiResponse = events.APIGatewayV2HTTPResponse{Body: string(jsonBody), StatusCode: 200}
-
-	return &apiResponse, nil
+	return nodes, nil
 }
 
 func (s *graphService) CreateRelationships(parsedRequestBody models.PostRecordRelationshipRequestBody,

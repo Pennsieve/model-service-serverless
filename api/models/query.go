@@ -10,3 +10,10 @@ type Filters struct {
 	Operator string `json:"operator"`
 	Value    string `json:"value"`
 }
+
+type QueryResponse struct {
+	ModelName string   `json:"model"`
+	Limit     int      `json:"limit"`
+	Offset    int      `json:"offset"`
+	Records   []Record `json:"filters"`
+}

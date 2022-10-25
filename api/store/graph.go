@@ -18,8 +18,8 @@ type GraphStore interface {
 	CreateRelationShips(datasetId int, organizationId int, userId string,
 		q models.PostRecordRelationshipRequestBody) ([]models.ShortRecordRelationShip, error)
 	GetModelByName(modelName string, datasetId int, organizationId int) (*models.Model, error)
-	GetModels(datasetId int, organizationId int) ([]models.Model, error)
-	Query(datasetId int, organizationId int, q models.QueryRequestBody) error
+	GetModels(datasetId int, organizationId int) (map[string]models.Model, error)
+	Query(datasetId int, organizationId int, q models.QueryRequestBody) ([]models.Record, error)
 }
 
 func NewGraphStore(db Neo4jAPI) *graphStore {
