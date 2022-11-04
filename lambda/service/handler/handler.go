@@ -42,7 +42,6 @@ func init() {
 
 func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGatewayV2HTTPResponse, error) {
 	var err error
-	fmt.Println("IN MODEL SERVICE HANDLER")
 	var apiResponse *events.APIGatewayV2HTTPResponse
 
 	r := regexp.MustCompile(`(?P<method>) (?P<pathKey>.*)`)

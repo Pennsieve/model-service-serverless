@@ -9,22 +9,6 @@ import (
 	"strings"
 )
 
-type SearchPath struct {
-	Source string
-	Target string
-	Path   []PathElement
-}
-
-type PathElement struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	ID          string `json:"id"`
-	DisplayName string `json:"display_name"`
-	Type        string `json:"type,omitempty"`
-}
-
-var validOperators = [...]string{"IS", "IS NOT", "EQUALS", "NOT EQUALS", "LESS THAN", "LESS THAN EQUALS", "GREATER THAN", "GREATER THAN EQUALS", "STARTS WITH", "CONTAINS"}
-
 // Query returns an array of records based on a set of filters within a dataset
 func (s *graphStore) Query(datasetId int, organizationId int, q models.QueryRequestBody) ([]models.Record, error) {
 
@@ -85,7 +69,7 @@ func (s *graphStore) Query(datasetId int, organizationId int, q models.QueryRequ
 
 	}
 
-	query, err := generateQuery(shortestPaths, q.Filters)
+	query, err := generateQuery(sourceModel, shortestPaths, q.Filters)
 
 	result, err = s.db.Run(ctx, query, nil)
 	if err != nil {
@@ -116,76 +100,77 @@ func (s *graphStore) Query(datasetId int, organizationId int, q models.QueryRequ
 	return records, nil
 }
 
-func generateQuery(paths []dbtype.Path, filters []models.Filters) (string, error) {
+// generateQuery returns a Cypher query based on the provided paths and filters.
+func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []models.Filters) (string, error) {
 
-	// First Path
-	sql := strings.Builder{}
-	sql.WriteString("MATCH ")
+	// Dynamically build the queryStr
+	queryStr := strings.Builder{}
+	queryStr.WriteString("MATCH ")
 
 	// Iterate over all shortest paths
 	setRestart := false
-	for iPath, p := range paths {
+	if len(paths) > 0 {
+		for iPath, p := range paths {
 
-		// Iterate over all nodes within a single path
+			// Iterate over all nodes within a single path
+			for pathIndex := range p.Nodes {
+				curNode := p.Nodes[pathIndex]
 
-		for pathIndex := range p.Nodes {
-			curNode := p.Nodes[pathIndex]
+				// Skip the model node for anything except first path.
+				if iPath == 0 {
 
-			// Skip the model node for anything except first path.
-			if iPath == 0 {
-
-				if pathIndex == 0 {
-					curRel := p.Relationships[pathIndex]
-					sql.WriteString(fmt.Sprintf("(M%s:Model{id:'%s'})<-[:`@INSTANCE_OF`]-(%s:Record)-[:%s]-",
-						curNode.Props["name"], curNode.Props["id"], curNode.Props["name"], curRel.Props["type"]))
-				} else {
-					if pathIndex <= len(p.Relationships)-1 {
+					if pathIndex == 0 {
 						curRel := p.Relationships[pathIndex]
-						sql.WriteString(fmt.Sprintf("(%s:Record)-[:%s]-", curNode.Props["name"], curRel.Props["type"]))
+						queryStr.WriteString(fmt.Sprintf("(M%s:Model{id:'%s'})<-[:`@INSTANCE_OF`]-(%s:Record)-[:%s]-",
+							curNode.Props["name"], curNode.Props["id"], curNode.Props["name"], curRel.Props["type"]))
 					} else {
-						sql.WriteString(fmt.Sprintf("(%s:Record)-[:`@INSTANCE_OF`]->(M%s:Model{id:'%s'}) ",
-							p.Nodes[len(p.Nodes)-1].Props["name"], p.Nodes[len(p.Nodes)-1].Props["name"], p.Nodes[len(p.Nodes)-1].Props["id"]))
-						setRestart = true
-					}
-				}
-
-			} else {
-
-				// Iterate over previous paths to check if the current node is already includeded in the graph-query.
-				// We can do this because the paths all start from the same model, and the shortest route to any node
-				// does not change between paths.
-				pathElExists := false
-				for ip, previousPath := range paths {
-
-					// Don't check existing or unprocessed paths
-					if ip == iPath {
-						break
-					}
-
-					// If a previous path has already included the node, mark the node as existing.
-					if pathIndex <= len(previousPath.Nodes)-1 {
-						if curNode.Props["name"] == previousPath.Nodes[pathIndex].Props["name"] {
-							pathElExists = true
+						if pathIndex <= len(p.Relationships)-1 {
+							curRel := p.Relationships[pathIndex]
+							queryStr.WriteString(fmt.Sprintf("(%s:Record)-[:%s]-", curNode.Props["name"], curRel.Props["type"]))
+						} else {
+							queryStr.WriteString(fmt.Sprintf("(%s:Record)-[:`@INSTANCE_OF`]->(M%s:Model{id:'%s'}) ",
+								p.Nodes[len(p.Nodes)-1].Props["name"], p.Nodes[len(p.Nodes)-1].Props["name"], p.Nodes[len(p.Nodes)-1].Props["id"]))
+							setRestart = true
 						}
 					}
-				}
 
-				// If the node does not exist in the query, include the element. AND
-				// if this is the first element of a new path, then start at the last known element.
-				if !pathElExists {
-					// In case this is the first node in the path, include the last previously known node as the starting point.
-					if setRestart {
-						sql.WriteString(fmt.Sprintf(", (%s:Record)-[:%s]-", p.Nodes[len(p.Nodes)-2].Props["name"], p.Relationships[len(p.Nodes)-2].Props["type"]))
+				} else {
+
+					// Iterate over previous paths to check if the current node is already includeded in the graph-query.
+					// We can do this because the paths all start from the same model, and the shortest route to any node
+					// does not change between paths.
+					pathElExists := false
+					for ip, previousPath := range paths {
+
+						// Don't check existing or unprocessed paths
+						if ip == iPath {
+							break
+						}
+
+						// If a previous path has already included the node, mark the node as existing.
+						if pathIndex <= len(previousPath.Nodes)-1 {
+							if curNode.Props["name"] == previousPath.Nodes[pathIndex].Props["name"] {
+								pathElExists = true
+							}
+						}
 					}
 
-					if pathIndex == len(p.Relationships) {
+					// If the node does not exist in the query, include the element. AND
+					// if this is the first element of a new path, then start at the last known element.
+					if !pathElExists {
+						// In case this is the first node in the path, include the last previously known node as the starting point.
+						if setRestart {
+							queryStr.WriteString(fmt.Sprintf(", (%s:Record)-[:%s]-", p.Nodes[len(p.Nodes)-2].Props["name"], p.Relationships[len(p.Nodes)-2].Props["type"]))
+						}
 
-						sql.WriteString(fmt.Sprintf("(%s:Record) ", p.Nodes[len(p.Nodes)-1].Props["name"]))
+						// Check if this is the final node, or if this is a waypoint.
+						if pathIndex == len(p.Relationships) {
+							queryStr.WriteString(fmt.Sprintf("(%s:Record) ", p.Nodes[len(p.Nodes)-1].Props["name"]))
+						} else {
+							curRel := p.Relationships[pathIndex]
+							queryStr.WriteString(fmt.Sprintf("(%s:Record)-[:%s]-", curNode.Props["name"], curRel.Props["type"]))
+						}
 
-					} else {
-
-						curRel := p.Relationships[pathIndex]
-						sql.WriteString(fmt.Sprintf("(%s:Record)-[:%s]-", curNode.Props["name"], curRel.Props["type"]))
 					}
 
 				}
@@ -193,28 +178,37 @@ func generateQuery(paths []dbtype.Path, filters []models.Filters) (string, error
 			}
 
 		}
-
+	} else {
+		// No paths; only filters on model that is requested
+		queryStr.WriteString(fmt.Sprintf("(M%s:Model{id:'%s'})<-[:`@INSTANCE_OF`]-(%s:Record) ",
+			sourceModel.Name, sourceModel.ID, sourceModel.Name))
 	}
-
 	// Include WHERE clauses
 	firstWhereClause := true
 	for _, f := range filters {
 		if !firstWhereClause {
-			sql.WriteString("AND ")
+			queryStr.WriteString("AND ")
 		} else {
-			sql.WriteString("WHERE ")
+			queryStr.WriteString("WHERE ")
 		}
-		sql.WriteString(fmt.Sprintf("%s.%s %s '%s' ", f.Model, f.Property, f.Operator, f.Value))
+		queryStr.WriteString(fmt.Sprintf("%s.%s %s '%s' ", f.Model, f.Property, f.Operator, f.Value))
 		firstWhereClause = false
 	}
 
 	// Return
-	sql.WriteString(fmt.Sprintf("RETURN %s AS records LIMIT %d", paths[0].Nodes[0].Props["name"], 100))
+	queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s AS records LIMIT %d", sourceModel.Name, 100))
 
-	return sql.String(), nil
+	log.Printf("Query: %s\n", queryStr.String())
+
+	return queryStr.String(), nil
 }
 
+// validOperator checks if the requested operator is one of the allowed methods.
 func validOperator(op string) bool {
+	var validOperators = [...]string{
+		"IS", "IS NOT", "EQUALS", "NOT EQUALS", "LESS THAN", "LESS THAN EQUALS",
+		"GREATER THAN", "GREATER THAN EQUALS", "STARTS WITH", "CONTAINS"}
+
 	for _, o := range validOperators {
 		if op == o {
 			return true
