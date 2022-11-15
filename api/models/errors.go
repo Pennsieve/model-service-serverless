@@ -15,3 +15,11 @@ type UnsupportedOperatorError struct {
 func (e *UnsupportedOperatorError) Error() string {
 	return "Unsupported Operator: " + e.Operator
 }
+
+type UnknownModelPropertyError struct {
+	PropName string
+}
+
+func (e *UnknownModelPropertyError) Error() string {
+	return "Unknown model-property: " + e.PropName
+}

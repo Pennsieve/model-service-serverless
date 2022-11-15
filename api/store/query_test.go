@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j/dbtype"
 	"github.com/pennsieve/model-service-serverless/api/models"
 	"github.com/stretchr/testify/assert"
@@ -176,8 +177,15 @@ func TestQuery(t *testing.T) {
 		},
 	}
 
-	queryStr, _ := generateQuery("samples", paths, filters)
+	queryStr, err := generateQuery(models.Model{
+		ID:   "9609bfb8-c7a1-45d5-b683-de2e39788cc0",
+		Name: "samples",
+	}, paths, filters, "'@id'")
 
-	assert.Equal(t, "MATCH (Msamples:Model{id:'9609bfb8-c7a1-45d5-b683-de2e39788cc0'})<-[:`@INSTANCE_OF`]-(samples:Record)-[:SAMPLE_BELONGS_TO_VISIT]-(visits:Record)-[:VISIT_BELONGS_TO_SUBJECT]-(patient:Record)-[:`@INSTANCE_OF`]->(Mpatient:Model{id:'43f44351-7d80-454b-9d11-6ecc0c158559'}) , (visits:Record)-[:VISIT_BELONGS_TO_STUDY]-(study:Record) , (location:Record)-[:LOCATION_BELONGS_TO_STATE]-(location:Record)-[:LOCATION_BELONGS_TO_STATE]-, (location:Record)-[:LOCATION_BELONGS_TO_STATE]-(state:Record) WHERE patient.name STARTS_WITH 'LIM031' AND samples.sample_type_id STARTS_WITH 'Biopsy Cells' AND visit.study STARTS_WITH 'Wu LIMBO' AND state.mascot STARTS_WITH 'Eagle' RETURN samples AS records LIMIT 100", queryStr)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	assert.Equal(t, "MATCH (Msamples:Model{id:'9609bfb8-c7a1-45d5-b683-de2e39788cc0'})<-[:`@INSTANCE_OF`]-(samples:Record)-[:SAMPLE_BELONGS_TO_VISIT]-(visits:Record)-[:VISIT_BELONGS_TO_SUBJECT]-(patient:Record)-[:`@INSTANCE_OF`]->(Mpatient:Model{id:'43f44351-7d80-454b-9d11-6ecc0c158559'}) , (visits:Record)-[:VISIT_BELONGS_TO_STUDY]-(study:Record) , (location:Record)-[:LOCATION_BELONGS_TO_STATE]-(location:Record)-[:LOCATION_BELONGS_TO_STATE]-, (location:Record)-[:LOCATION_BELONGS_TO_STATE]-(state:Record) WHERE patient.name STARTS_WITH 'LIM031' AND samples.sample_type_id STARTS_WITH 'Biopsy Cells' AND visit.study STARTS_WITH 'Wu LIMBO' AND state.mascot STARTS_WITH 'Eagle' RETURN DISTINCT samples AS records ORDER BY samples.'@id' LIMIT 100", queryStr)
 
 }

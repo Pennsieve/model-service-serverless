@@ -46,6 +46,9 @@ func postGraphQueryRoute(s service.GraphService, request events.APIGatewayV2HTTP
 
 	if err != nil {
 		switch err.(type) {
+		case *models.UnknownModelPropertyError:
+			apiResponse = events.APIGatewayV2HTTPResponse{
+				Body: gateway.CreateErrorMessage(err.Error(), 400), StatusCode: 400}
 		case *models.UnknownModelError:
 			apiResponse = events.APIGatewayV2HTTPResponse{
 				Body: gateway.CreateErrorMessage(err.Error(), 400), StatusCode: 400}

@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j/dbtype"
 	"github.com/pennsieve/model-service-serverless/api/models"
@@ -20,6 +21,31 @@ func (s *graphStore) Query(datasetId int, organizationId int, q models.QueryRequ
 	sourceModel, inMap := modelMap[q.Model]
 	if inMap == false {
 		return nil, &models.UnknownModelError{Model: q.Model}
+	}
+
+	// Use default ordering unless specifically defined
+	orderBy := q.OrderBy
+	if orderBy == "" {
+		orderBy = "`@sort_key`"
+	} else {
+		//	Check if provided value is valid.
+		modelProps, err := s.GetModelProps(datasetId, organizationId, q.Model)
+		if err != nil {
+			return nil, err
+		}
+
+		propFound := false
+		for _, v := range modelProps {
+			if v.Name == q.OrderBy {
+				orderBy = q.OrderBy
+				propFound = true
+				break
+			}
+		}
+
+		if !propFound {
+			return nil, &models.UnknownModelPropertyError{PropName: q.OrderBy}
+		}
 	}
 
 	targetModels := make(map[string]string)
@@ -69,7 +95,7 @@ func (s *graphStore) Query(datasetId int, organizationId int, q models.QueryRequ
 
 	}
 
-	query, err := generateQuery(sourceModel, shortestPaths, q.Filters)
+	query, err := generateQuery(sourceModel, shortestPaths, q.Filters, orderBy)
 
 	result, err = s.db.Run(ctx, query, nil)
 	if err != nil {
@@ -101,7 +127,11 @@ func (s *graphStore) Query(datasetId int, organizationId int, q models.QueryRequ
 }
 
 // generateQuery returns a Cypher query based on the provided paths and filters.
-func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []models.Filters) (string, error) {
+func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []models.Filters, orderByProp string) (string, error) {
+
+	if orderByProp == "" {
+		return "", errors.New("orderBy cannot be empty")
+	}
 
 	// Dynamically build the queryStr
 	queryStr := strings.Builder{}
@@ -196,9 +226,7 @@ func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []mode
 	}
 
 	// Return
-	queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s AS records LIMIT %d", sourceModel.Name, 100))
-
-	log.Printf("Query: %s\n", queryStr.String())
+	queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s AS records ORDER BY %s.%s LIMIT %d", sourceModel.Name, sourceModel.Name, orderByProp, 100))
 
 	return queryStr.String(), nil
 }

@@ -88,3 +88,23 @@ func parseModelResponse(record *db.Record) models.Model {
 	}
 	return m
 }
+
+func parseModelPropertyResponse(record *db.Record) models.ModelProperty {
+	// Create key/value map based on keys and values returned.
+	valueMap := make(map[string]interface{})
+	values := record.Values
+	for i, k := range record.Keys {
+		valueMap[k] = values[i]
+	}
+
+	p := models.ModelProperty{
+		ID:           stringOrEmpty(valueMap["id"]),
+		DataType:     valueMap["data_type"],
+		DefaultValue: valueMap["default_value"],
+		DisplayName:  stringOrEmpty(valueMap["display_name"]),
+		Name:         stringOrEmpty(valueMap["name"]),
+		IsModelTitle: valueMap["model_title"].(bool),
+		Index:        valueMap["index"].(int64),
+	}
+	return p
+}
