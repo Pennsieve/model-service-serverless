@@ -11,6 +11,8 @@ type GraphService interface {
 		organizationId int) ([]models.Record, error)
 	CreateRelationships(parsedRequestBody models.PostRecordRelationshipRequestBody,
 		datasetId int, organizationId int, userNodeId string) ([]models.ShortRecordRelationShip, error)
+	Autocomplete(parsedRequestBody models.AutocompleteRequestBody, datasetId int,
+		organizationId int) ([]string, error)
 }
 
 func NewGraphService(store store.GraphStore) *graphService {
@@ -48,6 +50,18 @@ func (s *graphService) QueryGraph(parsedRequestBody models.QueryRequestBody, dat
 	}
 
 	return nodes, nil
+}
+
+func (s *graphService) Autocomplete(parsedRequestBody models.AutocompleteRequestBody, datasetId int,
+	organizationId int) ([]string, error) {
+
+	values, err := s.store.Autocomplete(datasetId, organizationId, parsedRequestBody)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return values, nil
 }
 
 func (s *graphService) CreateRelationships(parsedRequestBody models.PostRecordRelationshipRequestBody,

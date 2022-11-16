@@ -48,56 +48,15 @@ func (s *graphStore) Query(datasetId int, organizationId int, q models.QueryRequ
 		}
 	}
 
-	targetModels := make(map[string]string)
-	for _, v := range q.Filters {
-		if v.Model != q.Model {
-			tModel, inMap := modelMap[v.Model]
-			if !inMap {
-				return nil, &models.UnknownModelError{Model: v.Model}
-			}
-			targetModels[v.Model] = tModel.ID
-		}
-
-		// Check operator
-		if !validOperator(v.Operator) {
-			return nil, &models.UnsupportedOperatorError{Operator: v.Operator}
-		}
-
-	}
-
-	keys := make([]string, len(targetModels))
-	i := 0
-	for _, v := range targetModels {
-		keys[i] = v
-		i++
-	}
-
-	targetModelStr := fmt.Sprintf("['%s']", strings.Join(keys, "','"))
-
-	cql := fmt.Sprintf("MATCH (m:Model{id:'%s'})-[:`@IN_DATASET`]->(d:Dataset)-[:`@IN_ORGANIZATION`]->(o:Organization) ", sourceModel.ID) +
-		"MATCH (n:Model)-[:`@IN_DATASET`]->(d) " +
-		fmt.Sprintf("WHERE n.id IN %s ", targetModelStr) +
-		"MATCH p = shortestPath((m)-[:`@RELATED_TO` *..4]-(n)) " +
-		"RETURN p AS path"
-
 	ctx := context.Background()
 
-	result, err := s.db.Run(ctx, cql, nil)
-	if err != nil {
-		return nil, err
-	}
+	targetModels, err := getTargetModelsMap(q.Filters, sourceModel, modelMap)
 
-	var shortestPaths []dbtype.Path
-	for result.Next(ctx) {
-		r := result.Record()
-		path, _ := r.Get("path")
-		shortestPaths = append(shortestPaths, path.(dbtype.Path))
+	shortestPaths, err := s.ShortestPath(ctx, sourceModel, targetModels)
 
-	}
+	query, err := generateQuery(sourceModel, shortestPaths, q.Filters, orderBy, false, "", "")
 
-	query, err := generateQuery(sourceModel, shortestPaths, q.Filters, orderBy)
-
-	result, err = s.db.Run(ctx, query, nil)
+	result, err := s.db.Run(ctx, query, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -126,8 +85,112 @@ func (s *graphStore) Query(datasetId int, organizationId int, q models.QueryRequ
 	return records, nil
 }
 
+// Autocomplete returns a list of terms that match values given the specified filters for a property in a model
+func (s *graphStore) Autocomplete(datasetId int, organizationId int, q models.AutocompleteRequestBody) ([]string, error) {
+
+	modelMap, err := s.GetModels(datasetId, organizationId)
+	if err != nil {
+		log.Println(err)
+	}
+
+	sourceModel, inMap := modelMap[q.Model]
+	if inMap == false {
+		return nil, &models.UnknownModelError{Model: q.Model}
+	}
+
+	// Use default ordering
+	orderBy := "`@sort_key`"
+
+	ctx := context.Background()
+
+	targetModels, err := getTargetModelsMap(q.Filters, sourceModel, modelMap)
+
+	shortestPaths, err := s.ShortestPath(ctx, sourceModel, targetModels)
+
+	query, err := generateQuery(sourceModel, shortestPaths, q.Filters, orderBy, true, q.Text, q.Property)
+
+	log.Println(query)
+
+	result, err := s.db.Run(ctx, query, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	records, err := result.Collect(ctx)
+	var values []string
+	if err != nil {
+		return values, err
+	}
+
+	for _, v := range records {
+		value, _ := v.Get("value")
+		values = append(values, value.(string))
+	}
+
+	return values, nil
+}
+
+// shortestPath returns the shortest paths between source model and the target models
+func (s *graphStore) ShortestPath(ctx context.Context, sourceModel models.Model, targetModels map[string]string) ([]dbtype.Path, error) {
+
+	keys := make([]string, len(targetModels))
+	i := 0
+	for _, v := range targetModels {
+		keys[i] = v
+		i++
+	}
+
+	targetModelStr := fmt.Sprintf("['%s']", strings.Join(keys, "','"))
+
+	cql := fmt.Sprintf("MATCH (m:Model{id:'%s'})-[:`@IN_DATASET`]->(d:Dataset)-[:`@IN_ORGANIZATION`]->(o:Organization) ", sourceModel.ID) +
+		"MATCH (n:Model)-[:`@IN_DATASET`]->(d) " +
+		fmt.Sprintf("WHERE n.id IN %s ", targetModelStr) +
+		"MATCH p = shortestPath((m)-[:`@RELATED_TO` *..4]-(n)) " +
+		"RETURN p AS path"
+
+	result, err := s.db.Run(ctx, cql, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var shortestPaths []dbtype.Path
+	for result.Next(ctx) {
+		r := result.Record()
+		path, _ := r.Get("path")
+		shortestPaths = append(shortestPaths, path.(dbtype.Path))
+
+	}
+
+	return shortestPaths, nil
+}
+
+// getTargetModelsMap returns a map between model name and model object
+func getTargetModelsMap(filters []models.Filters, sourceModel models.Model, modelMap map[string]models.Model) (map[string]string, error) {
+
+	targetModels := make(map[string]string)
+	for _, v := range filters {
+		if v.Model != sourceModel.Name {
+			tModel, inMap := modelMap[v.Model]
+			if !inMap {
+				return nil, &models.UnknownModelError{Model: v.Model}
+			}
+			targetModels[v.Model] = tModel.ID
+		}
+
+		// Check operator
+		if !validOperator(v.Operator) {
+			return nil, &models.UnsupportedOperatorError{Operator: v.Operator}
+		}
+
+	}
+
+	return targetModels, nil
+
+}
+
 // generateQuery returns a Cypher query based on the provided paths and filters.
-func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []models.Filters, orderByProp string) (string, error) {
+func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []models.Filters,
+	orderByProp string, autocomplete bool, autocompleteText string, autocompletePropName string) (string, error) {
 
 	if orderByProp == "" {
 		return "", errors.New("orderBy cannot be empty")
@@ -226,7 +289,19 @@ func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []mode
 	}
 
 	// Return
-	queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s AS records ORDER BY %s.%s LIMIT %d", sourceModel.Name, sourceModel.Name, orderByProp, 100))
+	if autocomplete {
+		// Add autocomplete filter
+		if !firstWhereClause {
+			queryStr.WriteString("AND ")
+		} else {
+			queryStr.WriteString("WHERE ")
+		}
+
+		queryStr.WriteString(fmt.Sprintf("%s.%s =~ '(?i).*%s.*' ", sourceModel.Name, autocompletePropName, autocompleteText))
+		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s.%s AS value LIMIT %d", sourceModel.Name, autocompletePropName, 20))
+	} else {
+		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s AS records ORDER BY %s.%s LIMIT %d", sourceModel.Name, sourceModel.Name, orderByProp, 100))
+	}
 
 	return queryStr.String(), nil
 }

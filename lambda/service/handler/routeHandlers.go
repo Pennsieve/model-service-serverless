@@ -101,3 +101,51 @@ func postGraphRecordRelationshipRoute(s service.GraphService, request events.API
 
 	return &apiResponse, nil
 }
+
+func postAutocompleteRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
+	apiResponse := events.APIGatewayV2HTTPResponse{}
+
+	parsedRequestBody := models.AutocompleteRequestBody{}
+	if err := json.Unmarshal([]byte(request.Body), &parsedRequestBody); err != nil {
+		message := "Error: Unable to parse body: " + fmt.Sprint(err)
+		apiResponse = events.APIGatewayV2HTTPResponse{
+			Body: gateway.CreateErrorMessage(message, 400), StatusCode: 400}
+		return &apiResponse, nil
+	}
+
+	values, err := s.Autocomplete(parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
+
+	if err != nil {
+		switch err.(type) {
+		case *models.UnknownModelPropertyError:
+			apiResponse = events.APIGatewayV2HTTPResponse{
+				Body: gateway.CreateErrorMessage(err.Error(), 400), StatusCode: 400}
+		case *models.UnknownModelError:
+			apiResponse = events.APIGatewayV2HTTPResponse{
+				Body: gateway.CreateErrorMessage(err.Error(), 400), StatusCode: 400}
+		case *models.UnsupportedOperatorError:
+			apiResponse = events.APIGatewayV2HTTPResponse{
+				Body: gateway.CreateErrorMessage(err.Error(), 400), StatusCode: 400}
+		default:
+			log.Println(err)
+			apiResponse = events.APIGatewayV2HTTPResponse{
+				Body: gateway.CreateErrorMessage("Internal Server Error", 500), StatusCode: 500}
+		}
+
+		return &apiResponse, nil
+
+	}
+
+	// CREATING API RESPONSE
+	responseBody := models.AutocompleteResponse{
+		ModelName: parsedRequestBody.Model,
+		Property:  parsedRequestBody.Property,
+		Values:    values,
+	}
+
+	jsonBody, _ := json.Marshal(responseBody)
+	apiResponse = events.APIGatewayV2HTTPResponse{Body: string(jsonBody), StatusCode: 200}
+
+	return &apiResponse, nil
+}

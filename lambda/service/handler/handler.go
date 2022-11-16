@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/pennsieve/model-service-serverless/api/service"
@@ -73,16 +72,21 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 	case "/metadata/query":
 		switch request.RequestContext.HTTP.Method {
 		case "POST":
-			fmt.Println("Handling POST /graph/query request")
-			authorized = true
-			//if authorized = hasRole(*claims, permissions.CreateDeleteFiles); authorized {
-			apiResponse, err = postGraphQueryRoute(graphService, request, claims)
-			//}
+			if authorized = authorizer.HasRole(*claims, permissions.ViewRecords); authorized {
+				apiResponse, err = postGraphQueryRoute(graphService, request, claims)
+			}
 		}
+	case "/metadata/query/autocomplete":
+		switch request.RequestContext.HTTP.Method {
+		case "POST":
+			if authorized = authorizer.HasRole(*claims, permissions.ViewRecords); authorized {
+				apiResponse, err = postAutocompleteRoute(graphService, request, claims)
+			}
+		}
+
 	case "/metadata/records/relationships":
 		switch request.RequestContext.HTTP.Method {
 		case "POST":
-			fmt.Println("Handling POST /metadata/records/relationships")
 			if authorized = authorizer.HasRole(*claims, permissions.CreateDeleteRecord); authorized {
 				apiResponse, err = postGraphRecordRelationshipRoute(graphService, request, claims)
 			}

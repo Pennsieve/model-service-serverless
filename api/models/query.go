@@ -18,3 +18,16 @@ type QueryResponse struct {
 	Offset    int      `json:"offset"`
 	Records   []Record `json:"filters"`
 }
+
+type AutocompleteRequestBody struct {
+	Model    string    `json:"model"`
+	Property string    `json:"property"`
+	Text     string    `json:"text"`
+	Filters  []Filters `json:"filters"`
+}
+
+type AutocompleteResponse struct {
+	ModelName string   `json:"model"`
+	Property  string   `json:"property"`
+	Values    []string `json:"values"`
+}
