@@ -20,6 +20,16 @@ type Model struct {
 	UpdatedBy     string      `json:"updatedBy"`
 }
 
+type ModelProperty struct {
+	ID           string      `json:"id"`
+	DataType     interface{} `json:"data_type"`
+	DefaultValue interface{} `json:"default"`
+	DisplayName  string      `json:"display_name"`
+	Name         string      `json:"name"`
+	IsModelTitle bool        `json:"model_title"`
+	Index        int64       `json:"index"`
+}
+
 // String returns a string representation of the model.
 func (m Model) String() string {
 	return fmt.Sprintf("Model -- name: %s, id: %s", m.Name, m.ID)

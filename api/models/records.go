@@ -37,3 +37,9 @@ type RecordRelationShip struct {
 	UpdatedAt  time.Time `json:"updatedAt"`
 	UpdatedBy  string    `json:"updatedBy"`
 }
+
+type Record struct {
+	ID    string                 `json:"id"`
+	Model string                 `json:"model"`
+	Props map[string]interface{} `json:"props"`
+}
