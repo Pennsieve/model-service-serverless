@@ -180,7 +180,7 @@ func TestQuery(t *testing.T) {
 	queryStr, err := generateQuery(models.Model{
 		ID:   "9609bfb8-c7a1-45d5-b683-de2e39788cc0",
 		Name: "samples",
-	}, paths, filters, "'@id'")
+	}, paths, filters, "'@id'", false, "", "")
 
 	if err != nil {
 		fmt.Println(err)
