@@ -1,4 +1,4 @@
-.PHONY: build-lambda test
+.PHONY: help clean test package publish
 
 LAMBDA_BUCKET ?= "pennsieve-cc-lambda-functions-use1"
 WORKING_DIR   ?= "$(shell pwd)"
@@ -30,9 +30,8 @@ test:
 	@echo "*   Testing Lambda    *"
 	@echo "***********************"
 	@echo ""
-	@\
-		cd $(WORKING_DIR)/lambda/service; \
-		go test ./... ;
+	cd $(WORKING_DIR)/lambda/service; \
+	go test ./... ;
 
 package:
 	@echo ""
@@ -40,11 +39,10 @@ package:
 	@echo "*   Building lambda   *"
 	@echo "***********************"
 	@echo ""
-	@\
-		cd lambda/service && \
-		env GOOS=linux GOARCH=amd64 go build -o '$(WORKING_DIR)/lambda/bin/modelService/$(SERVICE_NAME)-$(VERSION)'; \
-		cd '$(WORKING_DIR)/lambda/bin/modelService/'
-	    zip '$(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME)' . \
+	@cd lambda/service
+	@env GOOS=linux GOARCH=amd64 go build -o '$(WORKING_DIR)/lambda/bin/modelService/$(SERVICE_NAME)-$(VERSION)';
+	@cd '$(WORKING_DIR)/lambda/bin/modelService/'
+	@zip $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME) .
 
 publish:
 	@make package
