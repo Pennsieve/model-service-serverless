@@ -43,10 +43,8 @@ package:
 	@\
 		cd lambda/service && \
 		env GOOS=linux GOARCH=amd64 go build -o '$(WORKING_DIR)/lambda/bin/modelService/$(SERVICE_NAME)-$(VERSION)'; \
-		cd $(WORKING_DIR)/lambda/bin/modelService/
+		cd '$(WORKING_DIR)/lambda/bin/modelService/'
 	    zip '$(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME)' . \
-    	ls .; \
-    	pwd .;
 
 publish:
 	@make package
@@ -55,5 +53,5 @@ publish:
 	@echo "*   Publishing lambda   *"
 	@echo "*************************"
 	@echo ""
-	@aws s3 cp $(WORKING_DIR)/bin/modelService/$(PACKAGE_NAME) s3://$(LAMBDA_BUCKET)/$(SERVICE_NAME)/
+	@aws s3 cp $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME) s3://$(LAMBDA_BUCKET)/$(SERVICE_NAME)/
 	@rm -rf $(WORKING_DIR)/$(PACKAGE_NAME)
