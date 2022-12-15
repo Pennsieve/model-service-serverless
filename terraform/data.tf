@@ -100,7 +100,7 @@ data "terraform_remote_state" "fargate" {
 }
 
 # IMPORT S3 Service Lambda object
-data "aws_s3_bucket_object" "service_lambda_s3_object" {
+resource "aws_s3_object" "service_lambda_s3_object" {
   bucket = var.lambda_bucket
-  key    = "${var.service_name}-${var.tier}-edge/${var.service_name}-${var.tier}-edge-${var.version_number}.zip"
+  key    = "${var.service_name}/${var.service_name}-${var.version_number}.zip"
 }
