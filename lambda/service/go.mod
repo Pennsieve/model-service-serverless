@@ -10,7 +10,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.15.7
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.27.13
 	github.com/neo4j/neo4j-go-driver/v5 v5.0.0
-	github.com/pennsieve/model-service-serverless/api v0.0.0-00010101000000-000000000000
+	github.com/pennsieve/model-service-serverless/api v0.0.0-20220914184935-9edde63a7b08
 	github.com/pennsieve/pennsieve-go-api v1.2.2
 )
 
