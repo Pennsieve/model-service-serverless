@@ -3,10 +3,18 @@
 LAMBDA_BUCKET ?= "pennsieve-cc-lambda-functions-use1"
 WORKING_DIR   ?= "$(shell pwd)"
 API_DIR ?= "api"
+SERVICE_NAME  ?= "model-service-serverless"
+PACKAGE_NAME  ?= "${SERVICE_NAME}-${VERSION}.zip"
 
-package:
-	cd lambda/service && \
-	env GOOS=linux GOARCH=amd64 go build -o ../bin/modelService/model_service
+.DEFAULT: help
+
+help:
+	@echo "Make Help for $(SERVICE_NAME)"
+	@echo ""
+	@echo "make clean   - removes node_modules directory"
+	@echo "make test    - run tests"
+	@echo "make package - create venv and package lambda function"
+	@echo "make publish - package and publish lambda function"
 
 test:
 	@echo ""
@@ -26,6 +34,17 @@ test:
 		cd ${WORKING_DIR}/lambda/service; \
 		go test ./... ;
 
+package:
+	@echo ""
+	@echo "***********************"
+	@echo "*   Building lambda   *"
+	@echo "***********************"
+	@echo ""
+	@\
+		cd lambda/service && \
+		env GOOS=linux GOARCH=amd64 go build -o $(WORKING_DIR)/bin/modelService/${SERVICE_NAME}-${VERSION}; \
+	    zip $(WORKING_DIR)/bin/modelService/${SERVICE_NAME}-${VERSION} .
+
 publish:
 	@make package
 	@echo ""
@@ -33,5 +52,5 @@ publish:
 	@echo "*   Publishing lambda   *"
 	@echo "*************************"
 	@echo ""
-	@aws s3 cp $(WORKING_DIR)/$(PACKAGE_NAME) s3://${LAMBDA_BUCKET}/$(SERVICE_NAME)/
+	@aws s3 cp $(WORKING_DIR)/bin/modelService/$(PACKAGE_NAME) s3://${LAMBDA_BUCKET}/$(SERVICE_NAME)/
 	@rm -rf $(WORKING_DIR)/$(PACKAGE_NAME)
