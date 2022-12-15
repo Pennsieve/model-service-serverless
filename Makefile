@@ -42,8 +42,8 @@ package:
 	@echo ""
 	@\
 		cd lambda/service && \
-		env GOOS=linux GOARCH=amd64 go build -o '$(WORKING_DIR)/bin/modelService/$(SERVICE_NAME)-$(VERSION)'; \
-		cd $(WORKING_DIR)/bin/modelService/
+		env GOOS=linux GOARCH=amd64 go build -o '$(WORKING_DIR)/lambda/bin/modelService/$(SERVICE_NAME)-$(VERSION)'; \
+		cd $(WORKING_DIR)/lambda/bin/modelService/
 	    zip '$(WORKING_DIR)/bin/modelService/$(PACKAGE_NAME)' . \
     	ls .; \
     	pwd .;
