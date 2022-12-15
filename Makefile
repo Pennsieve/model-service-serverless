@@ -40,9 +40,13 @@ package:
 	@echo "***********************"
 	@echo ""
 	cd lambda/service \
+		pwd \
   		@env GOOS=linux GOARCH=amd64 go build -o '$(WORKING_DIR)/lambda/bin/modelService/$(SERVICE_NAME)-$(VERSION)';
 	cd $(WORKING_DIR)/lambda/bin/modelService/ \
-		zip $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME) .
+		pwd \
+		zip $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME) . \
+		ls .
+
 
 publish:
 	@make package
