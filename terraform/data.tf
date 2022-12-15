@@ -98,3 +98,9 @@ data "terraform_remote_state" "fargate" {
     region = "us-east-1"
   }
 }
+
+# IMPORT S3 Service Lambda object
+data "aws_s3_bucket_object" "service_lambda_s3_object" {
+  bucket = var.lambda_bucket
+  key    = "${var.service_name}-${var.tier}-edge/${var.service_name}-${var.tier}-edge-${var.version_number}.zip"
+}
