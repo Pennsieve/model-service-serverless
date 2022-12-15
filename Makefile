@@ -39,10 +39,10 @@ package:
 	@echo "*   Building lambda   *"
 	@echo "***********************"
 	@echo ""
-	@cd lambda/service
-	@env GOOS=linux GOARCH=amd64 go build -o '$(WORKING_DIR)/lambda/bin/modelService/$(SERVICE_NAME)-$(VERSION)';
-	@cd $(WORKING_DIR)/lambda/bin/modelService/
-	@zip $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME) .
+	@cd lambda/service \
+  		@env GOOS=linux GOARCH=amd64 go build -o '$(WORKING_DIR)/lambda/bin/modelService/$(SERVICE_NAME)-$(VERSION)';
+	@cd $(WORKING_DIR)/lambda/bin/modelService/ \
+		zip $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME) .
 
 publish:
 	@make package
