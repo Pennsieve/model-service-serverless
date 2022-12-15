@@ -22,16 +22,15 @@ test:
 	@echo "*   Testing API   *"
 	@echo "*******************"
 	@echo ""
-	@\
-		cd $(API_DIR); \
+	@cd $(API_DIR); \
 		go test ./... ;
 	@echo ""
 	@echo "***********************"
 	@echo "*   Testing Lambda    *"
 	@echo "***********************"
 	@echo ""
-	cd $(WORKING_DIR)/lambda/service; \
-	go test ./... ;
+	@cd $(WORKING_DIR)/lambda/service; \
+		go test ./... ;
 
 package:
 	@echo ""
@@ -40,13 +39,9 @@ package:
 	@echo "***********************"
 	@echo ""
 	cd lambda/service; \
-		pwd ;\
   		env GOOS=linux GOARCH=amd64 go build -o $(WORKING_DIR)/lambda/bin/modelService/$(SERVICE_NAME)-$(VERSION); \
 		cd $(WORKING_DIR)/lambda/bin/modelService/ ; \
-			pwd; \
-			zip -r $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME) . ; \
-			ls .
-
+			zip -r $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME) .
 
 publish:
 	@make package
@@ -56,4 +51,4 @@ publish:
 	@echo "*************************"
 	@echo ""
 	aws s3 cp $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME) s3://$(LAMBDA_BUCKET)/$(SERVICE_NAME)/
-	rm -rf $(WORKING_DIR)/$(PACKAGE_NAME)
+	rm -rf $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME)
