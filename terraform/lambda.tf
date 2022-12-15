@@ -9,10 +9,8 @@ resource "aws_lambda_function" "service_lambda" {
   role              = aws_iam_role.model_service_lambda_role.arn
   timeout           = 300
   memory_size       = 128
-  s3_bucket         = aws_s3_object.service_lambda_s3_object.bucket
-  s3_key            = aws_s3_object.service_lambda_s3_object.key
-#  source_code_hash = data.archive_file.model_service_lambda_archive.output_base64sha256
-#  filename         = "${path.module}/../lambda/bin/model_service_handler.zip"
+  s3_bucket         = var.lambda_bucket
+  s3_key            = "${var.service_name}/${var.service_name}-${var.version_number}.zip"
 
   vpc_config {
     subnet_ids         = tolist(data.terraform_remote_state.vpc.outputs.private_subnet_ids)
@@ -27,15 +25,3 @@ resource "aws_lambda_function" "service_lambda" {
     }
   }
 }
-
-# IMPORT S3 Service Lambda object
-resource "aws_s3_object" "service_lambda_s3_object" {
-  bucket = var.lambda_bucket
-  key    = "${var.service_name}/${var.service_name}-${var.version_number}.zip"
-}
-
-#data "archive_file" "model_service_lambda_archive" {
-#  type        = "zip"
-#  source_dir  = "${path.module}/../lambda/bin/modelService"
-#  output_path = "${path.module}/../lambda/bin/model_service_handler.zip"
-#}
