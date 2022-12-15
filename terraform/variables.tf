@@ -16,8 +16,6 @@ variable "neo4j_bolt_user" {
   default = "model_service_user"
 }
 
-variable "tier" {}
-
 variable "version_number" {}
 
 variable "lambda_bucket" {
