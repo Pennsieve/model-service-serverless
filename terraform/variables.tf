@@ -22,8 +22,6 @@ variable "lambda_bucket" {
   default = "pennsieve-cc-lambda-functions-use1"
 }
 
-
-
 locals {
   domain_name = data.terraform_remote_state.account.outputs.domain_name
   hosted_zone = data.terraform_remote_state.account.outputs.public_hosted_zone_id
