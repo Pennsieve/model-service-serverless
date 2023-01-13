@@ -13,7 +13,7 @@ ansiColor('xterm') {
 
     try {
       stage("Run Tests") {
-        sh "make dockertest"
+        sh "make testdocker"
       }
 
       if(isMain) {
