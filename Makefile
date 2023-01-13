@@ -1,4 +1,4 @@
-.PHONY: help clean test package publish
+.PHONY: help clean test testdocker package publish
 
 LAMBDA_BUCKET ?= "pennsieve-cc-lambda-functions-use1"
 WORKING_DIR   ?= "$(shell pwd)"
@@ -31,6 +31,11 @@ test:
 	@echo ""
 	@cd $(WORKING_DIR)/lambda/service; \
 		go test ./... ;
+
+testdocker:
+	cd api; \
+		docker-compose -f docker-compose.test.yml up --build --exit-code-from api_tests; \
+		docker-compose -f docker-compose.test.yml down --volumes
 
 package:
 	@echo ""

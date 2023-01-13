@@ -1,0 +1,27 @@
+version: '3'
+
+networks:
+  api-tests:
+    driver: bridge
+
+services:
+  api_tests:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.test
+    depends_on:
+      - db
+    volumes:
+      - $PWD:/go/src/github.com/pennsieve/model-service-serverless/api
+    networks:
+      - api-tests
+  db:
+    image: neo4j:community
+    ports:
+      - 7474:7474
+      - 7687:7687
+    volumes:
+      - ./data:/data
+    restart: on-failure
+    networks:
+      - api-tests
