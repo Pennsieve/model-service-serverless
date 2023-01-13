@@ -8,6 +8,10 @@ import (
 	"testing"
 )
 
+func FailTest(t *testing.T) {
+	assert.Equal(t, false, true)
+}
+
 func TestQuery(t *testing.T) {
 
 	// Mock result of shortestPath method.
