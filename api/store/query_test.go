@@ -5,13 +5,14 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j/dbtype"
 	"github.com/pennsieve/model-service-serverless/api/models"
 	"github.com/stretchr/testify/assert"
+	"log"
 	"testing"
 )
 
-//func TestFail(t *testing.T) {
-//	log.Println("Testing")
-//	assert.Equal(t, false, true)
-//}
+func TestFail(t *testing.T) {
+	log.Println("Testing")
+	assert.Equal(t, false, true)
+}
 
 func TestQuery(t *testing.T) {
 
