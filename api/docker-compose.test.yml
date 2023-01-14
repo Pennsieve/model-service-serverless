@@ -21,7 +21,7 @@ services:
       - 7474:7474
       - 7687:7687
     volumes:
-      - ./data:/data
+      - /tmp/neo4j/data:/data
     restart: on-failure
     networks:
       - api-tests
