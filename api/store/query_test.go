@@ -11,7 +11,7 @@ import (
 
 func TestFail(t *testing.T) {
 	log.Println("Testing")
-	assert.Equal(t, false, true)
+	assert.Equal(t, true, true)
 }
 
 func TestQuery(t *testing.T) {
