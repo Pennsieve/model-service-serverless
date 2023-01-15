@@ -63,7 +63,17 @@ func stringOrEmpty(v interface{}) string {
 	return ""
 }
 
-// parseResponse returns a Model object parsed from a Neo4J query result.
+// stringInSlice checks if a string exists in an array of strings
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+// parseModelResponse returns a Model object parsed from a Neo4J query result.
 func parseModelResponse(record *db.Record) models.Model {
 	// Create key/value map based on keys and values returned.
 	valueMap := make(map[string]interface{})

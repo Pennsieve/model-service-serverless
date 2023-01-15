@@ -16,27 +16,27 @@ help:
 	@echo "make package - create venv and package lambda function"
 	@echo "make publish - package and publish lambda function"
 
-test:
-	@echo ""
-	@echo "*******************"
-	@echo "*   Testing API   *"
-	@echo "*******************"
-	@echo ""
-	@cd $(API_DIR); \
-		go test ./... ;
-	@echo ""
-	@echo "***********************"
-	@echo "*   Testing Lambda    *"
-	@echo "***********************"
-	@echo ""
-	@cd $(WORKING_DIR)/lambda/service; \
-		go test ./... ;
+#test:
+#	@echo ""
+#	@echo "*******************"
+#	@echo "*   Testing API   *"
+#	@echo "*******************"
+#	@echo ""
+#	@cd $(API_DIR); \
+#		go test ./... ;
+#	@echo ""
+#	@echo "***********************"
+#	@echo "*   Testing Lambda    *"
+#	@echo "***********************"
+#	@echo ""
+#	@cd $(WORKING_DIR)/lambda/service; \
+#		go test ./... ;
 
-testdocker:
-	cd api; \
-		docker-compose -f docker-compose.test.yml up --build --exit-code-from api_tests; \
-		e1=$$? ;\
+test:
+	cd $(API_DIR); \
+		docker-compose -f docker-compose.test.yml up --build --exit-code-from api_tests; e1=$$? ;\
 		docker-compose -f docker-compose.test.yml down --volumes; \
+		rm -rf ${HOME}/neo4j/data
 		exit "$$(( e1 ))"
 
 package:

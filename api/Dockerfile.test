@@ -6,7 +6,6 @@ apk update; \
 apk add --no-cache git
  
   # Set working directory 
-
 WORKDIR /go/src/github.com/pennsieve/model-service-serverless/api
   
   # Run tests
