@@ -22,7 +22,7 @@ services:
       - "7474:7474"
       - "7687:7687"
     volumes:
-      - $HOME/neo4j/testdata:/neodata
+      - /tmp/neo4j/testdata:/neodata
     environment:
       - NEO4J_AUTH=neo4j/neo4jPassword
       - NEO4J_dbms_directories_data=/neodata
