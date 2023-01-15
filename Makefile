@@ -4,7 +4,7 @@ LAMBDA_BUCKET ?= "pennsieve-cc-lambda-functions-use1"
 WORKING_DIR   ?= "$(shell pwd)"
 API_DIR ?= "api"
 SERVICE_NAME  ?= "model-service-serverless"
-PACKAGE_NAME  ?= "${SERVICE_NAME}-${VERSION}.zip"
+PACKAGE_NAME  ?= "${SERVICE_NAME}-${IMAGE_TAG}.zip"
 
 .DEFAULT: help
 

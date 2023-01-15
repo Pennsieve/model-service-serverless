@@ -4,6 +4,8 @@ ansiColor('xterm') {
   node('executor') {
 
   // HACK: fix permissions on the Neo4j conf + data volumes:
+  // NEO4J container creates these folders with the neo4j user, deleting them in docker fails
+  // as the ubuntu user does not have access.
   stage("Clean") {
       sh "[ -d ./neo4j ] && sudo chmod -R 777 ./conf && sudo chown -R ubuntu:ubuntu ./conf || return 0"
       sh "[ -d ./data ] && sudo chmod -R 777 ./data && sudo chown -R ubuntu:ubuntu ./data || return 0"
@@ -31,7 +33,6 @@ ansiColor('xterm') {
       stage ('Build and Push') {
         sh "[ -d ./conf ] && sudo chmod -R 777 ./conf && sudo chown -R ubuntu:ubuntu ./conf || return 0"
         sh "[ -d ./data ] && sudo chmod -R 777 ./data && sudo chown -R ubuntu:ubuntu ./data || return 0"
-
         sh "IMAGE_TAG=${imageTag} make publish"
       }
 
