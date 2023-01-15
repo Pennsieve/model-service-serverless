@@ -36,7 +36,7 @@ test:
 	cd $(API_DIR); \
 		docker-compose -f docker-compose.test.yml up --build --exit-code-from api_tests; e1=$$? ;\
 		docker-compose -f docker-compose.test.yml down --volumes; \
-		rm -rf ${HOME}/neo4j/data
+		sudo rm -rf ${HOME}/neo4j/data
 		exit "$$(( e1 ))"
 
 package:
