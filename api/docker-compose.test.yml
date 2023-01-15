@@ -21,6 +21,7 @@ services:
     ports:
       - "7474:7474"
       - "7687:7687"
+    user: jenkins
     volumes:
       - /tmp/neo4j/testdata:/neodata
     environment:
