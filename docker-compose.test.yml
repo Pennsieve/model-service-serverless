@@ -1,0 +1,35 @@
+version: '3'
+
+networks:
+  api-tests:
+    driver: bridge
+
+services:
+  api_tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      - db
+    env_file:
+      - test.env
+    volumes:
+      - $PWD:/go/src/github.com/pennsieve/model-service-serverless
+    networks:
+      - api-tests
+  db:
+#    image: neo4j:3.5.35-community
+    image: neo4j/neo4j-arm64-experimental:3.5.30
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      # See https://community.neo4j.com/t/neo4j-db-3-5-docker-error/9913/7
+      - ./neo4jdata/plugins:/plugins
+      - ./neo4jdata/data:/var/lib/neo4j/data
+      - ./neo4jdata/conf:/var/lib/neo4j/conf
+    env_file:
+      - test.env
+    restart: on-failure
+    networks:
+      - api-tests

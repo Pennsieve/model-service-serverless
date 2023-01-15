@@ -33,11 +33,13 @@ help:
 #		go test ./... ;
 
 test:
-	cd $(API_DIR); \
-		docker-compose -f docker-compose.test.yml up --build --exit-code-from api_tests; e1=$$? ;\
-		docker-compose -f docker-compose.test.yml down --volumes; \
-		sudo rm -rf ${HOME}/neo4j/testdata
-		exit "$$(( e1 ))"
+	docker-compose -f docker-compose.test.yml down --remove-orphans
+	mkdir -p neo4jdata/data neo4jdata/conf
+	chmod -R 777 neo4jdata/data neo4jdata/conf
+	docker-compose -f docker-compose.test.yml up --build --exit-code-from api_tests; e1=$$? ;\
+	docker-compose -f docker-compose.test.yml down --volumes; \
+	rm -rf ./neo4jdata;
+	exit "$$(( e1 ))"
 
 package:
 	@echo ""

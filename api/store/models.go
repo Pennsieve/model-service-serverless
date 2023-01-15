@@ -98,7 +98,7 @@ func (s *graphStore) CreateModel(datasetId int, organizationId int, name string,
 
 	// Check if model with name already exist in dataset
 	var cql strings.Builder
-	cql.WriteString(fmt.Sprintf("MATCH (m:Model{name: %s})", name))
+	cql.WriteString(fmt.Sprintf("MATCH (m:Model{name: '%s'})", name))
 	cql.WriteString(fmt.Sprintf("-[`@IN_DATASET`]->(:Dataset{id:%d})", datasetId))
 	cql.WriteString(fmt.Sprintf("-[`@IN_ORGANIZATION`]->(:Organization{id:%d})", organizationId))
 	cql.WriteString("RETURN COUNT(m) AS count")
@@ -119,8 +119,13 @@ func (s *graphStore) CreateModel(datasetId int, organizationId int, name string,
 		return nil, err
 	}
 
-	cnt, _ := res.Get("count")
-	if cnt != 0 {
+	cnt, exists := res.Get("count")
+	if !exists {
+		return nil, errors.New("COunt does not exist")
+	}
+
+	// Check that model with that name does not exist.
+	if cnt.(int64) != 0 {
 		return nil, &models.ModelNameCountError{Name: name}
 	}
 
@@ -128,11 +133,11 @@ func (s *graphStore) CreateModel(datasetId int, organizationId int, name string,
 
 	// MATCHING
 	cql.WriteString(fmt.Sprintf("MATCH (d:Dataset{id: %d})-[:`@IN_ORGANIZATION`]->(Organization{id: %d}) ", datasetId, organizationId))
-	cql.WriteString(fmt.Sprintf("MERGE (u:User{node_id:%s}) ", userId))
-	cql.WriteString(fmt.Sprintf("CREATE (m:Model){`@max_sort_key`:0, id:randomUUID(),name:%s,display_name:%s,description:%s} ", name, displayName, description))
-	cql.WriteString("CREATE (m)-[@IN_DATASET]->(d) ")
-	cql.WriteString("CREATE (m)-[@CREATED_BY {at: datetime()}]->(u) ")
-	cql.WriteString("CREATE (m)-[@UPDATED_BY {at: datetime()}]->(u) ")
+	cql.WriteString(fmt.Sprintf("MERGE (u:User{node_id:'%s'}) ", userId))
+	cql.WriteString(fmt.Sprintf("CREATE (m:Model{`@max_sort_key`:0, id:randomUUID(),name:'%s',display_name:'%s',description:'%s'}) ", name, displayName, description))
+	cql.WriteString("CREATE (m)-[:`@IN_DATASET`]->(d) ")
+	cql.WriteString("CREATE (m)-[created:`@CREATED_BY` {at: datetime()}]->(u) ")
+	cql.WriteString("CREATE (m)-[updated:`@UPDATED_BY` {at: datetime()}]->(u) ")
 	cql.WriteString("RETURN m, created.at AS created_at, updated.at AS updated_at")
 
 	result, err = tx.Run(ctx, cql.String(), nil)
