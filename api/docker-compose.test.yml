@@ -16,8 +16,8 @@ services:
     networks:
       - api-tests
   db:
-#    image: neo4j:3.5.35-community
-    image: neo4j/neo4j-arm64-experimental:3.5.30
+    image: neo4j:3.5.35-community
+#    image: neo4j/neo4j-arm64-experimental:3.5.30
     ports:
       - "7474:7474"
       - "7687:7687"
