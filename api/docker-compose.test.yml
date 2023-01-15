@@ -21,9 +21,8 @@ services:
     ports:
       - "7474:7474"
       - "7687:7687"
-    user: jenkins
     volumes:
-      - /tmp/neo4j/testdata:/neodata
+      - ./neo4j/testdata:/neodata
     environment:
       - NEO4J_AUTH=neo4j/neo4jPassword
       - NEO4J_dbms_directories_data=/neodata
