@@ -16,15 +16,16 @@ services:
     networks:
       - api-tests
   db:
-    image: neo4j:3.5.35-community
-    #    image: neo4j/neo4j-arm64-experimental:3.5.30
+#    image: neo4j:3.5.35-community
+    image: neo4j/neo4j-arm64-experimental:3.5.30
     ports:
       - "7474:7474"
       - "7687:7687"
     volumes:
-      - $HOME/neo4j/data:/data
+      - $HOME/neo4j/testdata:/neodata
     environment:
       - NEO4J_AUTH=neo4j/neo4jPassword
+      - NEO4J_dbms_directories_data=/neodata
     restart: on-failure
     networks:
       - api-tests

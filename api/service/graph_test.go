@@ -58,10 +58,10 @@ func TestDBConnection(t *testing.T) {
 	graphStore := store.NewGraphStore(db)
 	service := NewGraphService(graphStore)
 
-	err := service.store.InitOrgAndDataset(1, 1, "N:Organization:123", "N:Dataset:123")
+	err := service.store.InitOrgAndDataset(2, 1, "N:Organization:123", "N:Dataset:123")
 	assert.Nil(t, err, "Could not set organization and dataset")
 
-	models, err := service.GetDatasetModels(1, 1)
+	models, err := service.GetDatasetModels(1, 2)
 	assert.Nil(t, err, "Could not get Dataset Models")
 
 	assert.Equal(t, 0, len(models))
