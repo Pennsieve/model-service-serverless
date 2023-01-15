@@ -17,7 +17,7 @@ func TestMain(m *testing.M) {
 	// Get Connection
 	testDBUri := "bolt://db:7687"
 	testUserName := "neo4j"
-	testPassword := "neo4jPassword"
+	testPassword := "blackandwhite"
 
 	var err error
 	neo4jDriver, err = neo4j.NewDriverWithContext(testDBUri,

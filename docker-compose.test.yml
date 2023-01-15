@@ -18,16 +18,16 @@ services:
     networks:
       - api-tests
   db:
-    image: neo4j:3.5.35-community
-#    image: neo4j/neo4j-arm64-experimental:3.5.30
+#    image: neo4j:3.5.35-community
+    image: neo4j/neo4j-arm64-experimental:3.5.30
     ports:
       - "7474:7474"
       - "7687:7687"
     volumes:
       # See https://community.neo4j.com/t/neo4j-db-3-5-docker-error/9913/7
-      - ./neo4jdata/plugins:/plugins
-      - ./neo4jdata/data:/var/lib/neo4j/data
-      - ./neo4jdata/conf:/var/lib/neo4j/conf
+      - ./plugins:/plugins
+      - ./data:/var/lib/neo4j/data
+      - ./conf:/var/lib/neo4j/conf
     env_file:
       - test.env
     restart: on-failure

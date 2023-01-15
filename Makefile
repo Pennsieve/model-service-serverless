@@ -1,4 +1,4 @@
-.PHONY: help clean test testdocker package publish
+.PHONY: help clean test testdocker package publish docs
 
 LAMBDA_BUCKET ?= "pennsieve-cc-lambda-functions-use1"
 WORKING_DIR   ?= "$(shell pwd)"
@@ -16,30 +16,11 @@ help:
 	@echo "make package - create venv and package lambda function"
 	@echo "make publish - package and publish lambda function"
 
-#test:
-#	@echo ""
-#	@echo "*******************"
-#	@echo "*   Testing API   *"
-#	@echo "*******************"
-#	@echo ""
-#	@cd $(API_DIR); \
-#		go test ./... ;
-#	@echo ""
-#	@echo "***********************"
-#	@echo "*   Testing Lambda    *"
-#	@echo "***********************"
-#	@echo ""
-#	@cd $(WORKING_DIR)/lambda/service; \
-#		go test ./... ;
-
 test:
 	docker-compose -f docker-compose.test.yml down --remove-orphans
 	mkdir -p neo4jdata/data neo4jdata/conf
 	chmod -R 777 neo4jdata/data neo4jdata/conf
-	docker-compose -f docker-compose.test.yml up --build --exit-code-from api_tests; e1=$$? ;\
-	docker-compose -f docker-compose.test.yml down --volumes; \
-	rm -rf ./neo4jdata;
-	exit "$$(( e1 ))"
+	docker-compose -f docker-compose.test.yml up --build --exit-code-from api_tests
 
 package:
 	@echo ""
@@ -61,3 +42,11 @@ publish:
 	@echo ""
 	aws s3 cp $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME) s3://$(LAMBDA_BUCKET)/$(SERVICE_NAME)/
 	rm -rf $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME)
+
+docker-clean:
+	docker-compose -f docker-compose.test.yml down
+
+clean: docker-clean
+	rm -rf conf/*
+	rm -rf data/*
+	rm -f plugins/*
