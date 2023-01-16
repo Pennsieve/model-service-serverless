@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 
 	// If testing on Jenkins (-> NEO4J_BOLT_URL is set) then wait for db to be active.
 	if _, ok := os.LookupEnv("NEO4J_BOLT_URL"); ok {
-		time.Sleep(120 * time.Second)
+		time.Sleep(30 * time.Second)
 	}
 
 	// Get Connection
