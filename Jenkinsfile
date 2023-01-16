@@ -23,7 +23,7 @@ ansiColor('xterm') {
   try {
     stage("Run Tests") {
       try {
-        sh "IMAGE_TAG=${imageTag} make test"
+        sh "IMAGE_TAG=${imageTag} make test-ci"
       } finally {
         sh "make docker-clean"
       }
