@@ -26,10 +26,8 @@ services:
       dockerfile: Dockerfile.test
     depends_on:
       - neo4j-ci
-    environment:
-      - NEO4J_BOLT_URL=bolt://neo4j-ci:7687
     env_file:
-      - test.env
+      - test_ci.env
     volumes:
       - $PWD:/go/src/github.com/pennsieve/model-service-serverless
     networks:
@@ -38,8 +36,8 @@ services:
   # NEO4j Container with no ports exposed to the host for use on Jenkins
   neo4j-ci:
     image: "neo4j:3.5.35-community"
-    environment:
-      - NEO4J_BOLT_URL=bolt://neo4j-ci:7687
+    env_file:
+      - test_ci.env
     volumes:
       # See https://community.neo4j.com/t/neo4j-db-3-5-docker-error/9913/7
       - ./plugins:/plugins
