@@ -26,6 +26,8 @@ services:
       dockerfile: Dockerfile.test
     depends_on:
       - neo4j-ci
+    environment:
+      - NEO4J_BOLT_URL=bolt://neo4j-ci:7687
     env_file:
       - test.env
     volumes:
