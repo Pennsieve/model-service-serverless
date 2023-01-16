@@ -36,8 +36,6 @@ services:
   # NEO4j Container with no ports exposed to the host for use on Jenkins
   neo4j-ci:
     image: "neo4j:3.5.35-community"
-    env_file:
-      - ./test.env
     environment:
       - NEO4J_BOLT_URL=bolt://neo4j-ci:7687
     volumes:
