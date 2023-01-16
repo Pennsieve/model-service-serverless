@@ -27,3 +27,9 @@ lambda/bin/*.zip
 # Docker folders
 api/data/
 api/vendor/
+
+# NEO4J Docker Folders
+plugins
+data
+config
+plugins

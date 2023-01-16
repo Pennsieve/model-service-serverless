@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/pennsieve/model-service-serverless/api/models"
 	"log"
 	"regexp"
@@ -106,26 +107,31 @@ func (s *graphStore) CreateModel(datasetId int, organizationId int, name string,
 	ctx := context.Background()
 	tx, err := s.db.BeginTransaction(ctx)
 	if err != nil {
+		tx.Close(ctx)
 		return nil, err
 	}
 
 	result, err := tx.Run(ctx, cql.String(), nil)
 	if err != nil {
+		tx.Rollback(ctx)
 		return nil, err
 	}
 
 	res, err := result.Single(context.Background())
 	if err != nil {
+		tx.Rollback(ctx)
 		return nil, err
 	}
 
 	cnt, exists := res.Get("count")
 	if !exists {
+		tx.Rollback(ctx)
 		return nil, errors.New("COunt does not exist")
 	}
 
 	// Check that model with that name does not exist.
 	if cnt.(int64) != 0 {
+		tx.Rollback(ctx)
 		return nil, &models.ModelNameCountError{Name: name}
 	}
 
@@ -140,41 +146,54 @@ func (s *graphStore) CreateModel(datasetId int, organizationId int, name string,
 	cql.WriteString("CREATE (m)-[updated:`@UPDATED_BY` {at: datetime()}]->(u) ")
 	cql.WriteString("RETURN m, created.at AS created_at, updated.at AS updated_at")
 
+	log.Println(cql.String())
+
 	result, err = tx.Run(ctx, cql.String(), nil)
 	if err != nil {
+		tx.Rollback(ctx)
 		return nil, err
 	}
 
-	// Create key/value map based on keys and values returned.
-	valueMap := make(map[string]interface{})
-	values := result.Record().Values
-	for i, k := range result.Record().Keys {
-		valueMap[k] = values[i]
+	rec, err := result.Single(ctx)
+	if err != nil {
+		tx.Rollback(ctx)
+		return nil, err
 	}
 
-	log.Println(values)
+	m, _ := rec.Get("m")
+	modelNode := m.(neo4j.Node)
 
-	m := models.Model{
-		Count:         valueMap["count"].(int64),
-		CreatedAt:     time.Now(), //valueMap["created_at"].(time.Time),
-		CreatedBy:     stringOrEmpty(valueMap["created_by"]),
-		Description:   stringOrEmpty(valueMap["description"]),
-		DisplayName:   stringOrEmpty(valueMap["display_name"]),
-		ID:            stringOrEmpty(valueMap["id"]),
-		Locked:        false,
-		Name:          stringOrEmpty(valueMap["name"]),
-		PropertyCount: valueMap["nrStaticProps"].(int64) + valueMap["nrLinkedProps"].(int64),
-		TemplateID:    nil,
-		UpdatedAt:     time.Now(), //valueMap["updated_at"].(time.Time),
-		UpdatedBy:     stringOrEmpty(valueMap["updated_by"]),
+	c, _ := rec.Get("created_at")
+	createdAt := c.(time.Time)
+
+	u, _ := rec.Get("created_at")
+	updatedAt := u.(time.Time)
+
+	log.Println(modelNode)
+	log.Println(createdAt)
+	log.Println(updatedAt)
+
+	mo := models.Model{
+		Count:       0,
+		CreatedAt:   createdAt,
+		CreatedBy:   userId,
+		Description: stringOrEmpty(modelNode.Props["description"]),
+		DisplayName: stringOrEmpty(modelNode.Props["display_name"]),
+		ID:          stringOrEmpty(modelNode.Props["id"]),
+		Locked:      false,
+		Name:        stringOrEmpty(modelNode.Props["name"]),
+		TemplateID:  nil,
+		UpdatedAt:   updatedAt,
+		UpdatedBy:   userId,
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
+		tx.Rollback(ctx)
 		return nil, err
 	}
 
-	return &m, nil
+	return &mo, nil
 }
 
 // GetModels returns a list of models for a provided dataset within an organization

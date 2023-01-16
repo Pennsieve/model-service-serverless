@@ -12,15 +12,24 @@ import (
 
 var neo4jDriver neo4j.DriverWithContext
 
+func getEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
 func TestMain(m *testing.M) {
 
-	// Wait a couple of seconds to enable NEO4J to start up.
-	time.Sleep(5 * time.Second)
+	// If testing on Jenkins (-> NEO4J_BOLT_URL is set) then wait for db to be active.
+	if _, ok := os.LookupEnv("NEO4J_BOLT_URL"); ok {
+		time.Sleep(10 * time.Second)
+	}
 
-	// Get Connection
-	testDBUri := "bolt://db:7687"
+	// Get NEO4J URI based on local vs. dockerized testing
+	testDBUri := getEnv("NEO4J_BOLT_URL", "bolt://localhost:7687")
 	testUserName := "neo4j"
-	testPassword := "neo4jPassword"
+	testPassword := "blackandwhite"
 
 	var err error
 	neo4jDriver, err = neo4j.NewDriverWithContext(testDBUri,

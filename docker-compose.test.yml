@@ -5,21 +5,52 @@ networks:
     driver: bridge
 
 services:
-  api_tests:
+  # Test Container for running tests locally (typically easier to just run go test ./...)
+  local_tests:
     build:
       context: .
       dockerfile: Dockerfile.test
     depends_on:
-      - db
+      - neo4j
     env_file:
       - test.env
     volumes:
       - $PWD:/go/src/github.com/pennsieve/model-service-serverless
     networks:
       - api-tests
-  db:
-    image: neo4j:3.5.35-community
-#    image: neo4j/neo4j-arm64-experimental:3.5.30
+
+  # Test Container for Jenkins
+  ci-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      - neo4j-ci
+    env_file:
+      - test.env
+    volumes:
+      - $PWD:/go/src/github.com/pennsieve/model-service-serverless
+    networks:
+      - api-tests
+
+  # NEO4j Container with no ports exposed to the host for use on Jenkins
+  neo4j-ci:
+    image: "neo4j:3.5.35-community"
+    env_file:
+      - ./test.env
+    environment:
+      - NEO4J_BOLT_URL=bolt://neo4j-ci:7687
+    volumes:
+      # See https://community.neo4j.com/t/neo4j-db-3-5-docker-error/9913/7
+      - ./plugins:/plugins
+      - ./data:/var/lib/neo4j/data
+      - ./conf:/var/lib/neo4j/conf
+    networks:
+      - api-tests
+
+  # NEO4j Container for local testing
+  neo4j:
+    image: neo4j/neo4j-arm64-experimental:3.5.30
     ports:
       - "7474:7474"
       - "7687:7687"
