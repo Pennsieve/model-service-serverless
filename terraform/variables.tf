@@ -16,7 +16,7 @@ variable "neo4j_bolt_user" {
   default = "model_service_user"
 }
 
-variable "version_number" {}
+variable "image_tag" {}
 
 variable "lambda_bucket" {
   default = "pennsieve-cc-lambda-functions-use1"
