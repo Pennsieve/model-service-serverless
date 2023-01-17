@@ -146,8 +146,6 @@ func (s *graphStore) CreateModel(datasetId int, organizationId int, name string,
 	cql.WriteString("CREATE (m)-[updated:`@UPDATED_BY` {at: datetime()}]->(u) ")
 	cql.WriteString("RETURN m, created.at AS created_at, updated.at AS updated_at")
 
-	log.Println(cql.String())
-
 	result, err = tx.Run(ctx, cql.String(), nil)
 	if err != nil {
 		tx.Rollback(ctx)
@@ -168,10 +166,6 @@ func (s *graphStore) CreateModel(datasetId int, organizationId int, name string,
 
 	u, _ := rec.Get("created_at")
 	updatedAt := u.(time.Time)
-
-	log.Println(modelNode)
-	log.Println(createdAt)
-	log.Println(updatedAt)
 
 	mo := models.Model{
 		Count:       0,
