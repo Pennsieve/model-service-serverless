@@ -5,9 +5,6 @@ NEO4J_APOC_VERSION=$2
 DOWNLOAD_URL="https://github.com/neo4j-contrib/neo4j-apoc-procedures/releases/download/$NEO4J_APOC_VERSION/apoc-$NEO4J_APOC_VERSION-all.jar"
 DEST_DIR="$TARGET_DIR/apoc-$NEO4J_APOC_VERSION-all.jar"
 
-#echo "hello"
-#echo $DEST_DIR
-
 if [ ! -e "$DEST_DIR" ]; then
   wget -O "$DEST_DIR" "$DOWNLOAD_URL"
 fi
