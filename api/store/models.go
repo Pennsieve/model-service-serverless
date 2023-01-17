@@ -2,10 +2,14 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/pennsieve/model-service-serverless/api/models"
 	"log"
+	"regexp"
 	"strings"
+	"time"
 )
 
 func (s *graphStore) GetModelByName(modelName string, datasetId int, organizationId int) (*models.Model, error) {
@@ -41,6 +45,149 @@ func (s *graphStore) GetModelByName(modelName string, datasetId int, organizatio
 	m := parseModelResponse(record)
 	return &m, nil
 
+}
+
+// InitOrgAndDataset ensures that the metadata database has records for the organization and dataset.
+func (s *graphStore) InitOrgAndDataset(organizationId int, datasetId int, organizationNodeId string, datasetNodeId string) error {
+
+	ctx := context.Background()
+
+	cql := "MERGE (o:Organization{id: $organizationId})" +
+		"ON CREATE SET o.id = toInteger($organizationId), o.node_id = $organizationNodeId " +
+		"ON MATCH SET o.node_id = COALESCE($organizationNodeId, o.node_id) " +
+		"MERGE (o)<-[:`@IN_ORGANIZATION`]-(d:Dataset{id: $datasetId}) " +
+		"ON CREATE SET d.id = toInteger($datasetId), d.node_id = $datasetNodeId " +
+		"ON MATCH SET d.node_id = COALESCE($datasetNodeId, d.node_id) " +
+		"RETURN o.id AS organizationId, d.id AS datasetId, o.node_id " +
+		"AS organizationNodeId, d.node_id AS datasetNodeId"
+
+	params := map[string]interface{}{
+		"organizationId":     organizationId,
+		"organizationNodeId": organizationNodeId,
+		"datasetId":          datasetId,
+		"datasetNodeId":      datasetNodeId,
+	}
+
+	results, err := s.db.Run(ctx, cql, params)
+	if err != nil {
+		log.Printf("Error with running the NEO4J Path query: %s", err)
+		return err
+	}
+
+	_, err = results.Single(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CreateModel creates a model in a dataset with a specific name and description
+func (s *graphStore) CreateModel(datasetId int, organizationId int, name string, displayName string, description string, userId string) (*models.Model, error) {
+
+	// Check if reserved model name
+	reservedModelNames := []string{"file"}
+	if stringInSlice(name, reservedModelNames) {
+		return nil, errors.New(fmt.Sprintf("%s is a reserved name. Unable to create model", name))
+	}
+
+	// Validate Model Name
+	name, err := validateModelName(name)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if model with name already exist in dataset
+	var cql strings.Builder
+	cql.WriteString(fmt.Sprintf("MATCH (m:Model{name: '%s'})", name))
+	cql.WriteString(fmt.Sprintf("-[`@IN_DATASET`]->(:Dataset{id:%d})", datasetId))
+	cql.WriteString(fmt.Sprintf("-[`@IN_ORGANIZATION`]->(:Organization{id:%d})", organizationId))
+	cql.WriteString("RETURN COUNT(m) AS count")
+
+	ctx := context.Background()
+	tx, err := s.db.BeginTransaction(ctx)
+	if err != nil {
+		tx.Close(ctx)
+		return nil, err
+	}
+
+	result, err := tx.Run(ctx, cql.String(), nil)
+	if err != nil {
+		tx.Rollback(ctx)
+		return nil, err
+	}
+
+	res, err := result.Single(context.Background())
+	if err != nil {
+		tx.Rollback(ctx)
+		return nil, err
+	}
+
+	cnt, exists := res.Get("count")
+	if !exists {
+		tx.Rollback(ctx)
+		return nil, errors.New("COunt does not exist")
+	}
+
+	// Check that model with that name does not exist.
+	if cnt.(int64) != 0 {
+		tx.Rollback(ctx)
+		return nil, &models.ModelNameCountError{Name: name}
+	}
+
+	cql.Reset()
+
+	// MATCHING
+	cql.WriteString(fmt.Sprintf("MATCH (d:Dataset{id: %d})-[:`@IN_ORGANIZATION`]->(Organization{id: %d}) ", datasetId, organizationId))
+	cql.WriteString(fmt.Sprintf("MERGE (u:User{node_id:'%s'}) ", userId))
+	cql.WriteString(fmt.Sprintf("CREATE (m:Model{`@max_sort_key`:0, id:randomUUID(),name:'%s',display_name:'%s',description:'%s'}) ", name, displayName, description))
+	cql.WriteString("CREATE (m)-[:`@IN_DATASET`]->(d) ")
+	cql.WriteString("CREATE (m)-[created:`@CREATED_BY` {at: datetime()}]->(u) ")
+	cql.WriteString("CREATE (m)-[updated:`@UPDATED_BY` {at: datetime()}]->(u) ")
+	cql.WriteString("RETURN m, created.at AS created_at, updated.at AS updated_at")
+
+	result, err = tx.Run(ctx, cql.String(), nil)
+	if err != nil {
+		tx.Rollback(ctx)
+		return nil, err
+	}
+
+	rec, err := result.Single(ctx)
+	if err != nil {
+		tx.Rollback(ctx)
+		return nil, err
+	}
+
+	m, _ := rec.Get("m")
+	modelNode := m.(neo4j.Node)
+
+	c, _ := rec.Get("created_at")
+	createdAt := c.(time.Time)
+
+	u, _ := rec.Get("created_at")
+	updatedAt := u.(time.Time)
+
+	mo := models.Model{
+		Count:       0,
+		CreatedAt:   createdAt,
+		CreatedBy:   userId,
+		Description: stringOrEmpty(modelNode.Props["description"]),
+		DisplayName: stringOrEmpty(modelNode.Props["display_name"]),
+		ID:          stringOrEmpty(modelNode.Props["id"]),
+		Locked:      false,
+		Name:        stringOrEmpty(modelNode.Props["name"]),
+		TemplateID:  nil,
+		UpdatedAt:   updatedAt,
+		UpdatedBy:   userId,
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		tx.Rollback(ctx)
+		return nil, err
+	}
+
+	return &mo, nil
 }
 
 // GetModels returns a list of models for a provided dataset within an organization
@@ -134,4 +281,27 @@ func (s *graphStore) GetModelProps(datasetId int, organizationId int, modelName 
 
 	return modelArr, nil
 
+}
+
+// validateModelName returns a valid ModelName or error.
+func validateModelName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	n := len(name)
+
+	if n == 0 {
+		return "", &models.EmptyError{}
+	}
+	if n > 64 {
+		return "", &models.NameTooLongError{Name: name}
+	}
+
+	// Will match all unicode letters, but not digits, and underscore "_",
+	// followed by letters, digits, and underscores:
+	r := regexp.MustCompile(`^([^\W\d_\-]|_)[\w_]*$`)
+	isValid := r.MatchString(name)
+	if !isValid {
+		return "", &models.ValidationError{Name: name}
+	}
+
+	return name, nil
 }

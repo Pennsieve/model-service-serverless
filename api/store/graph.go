@@ -7,14 +7,6 @@ import (
 	"github.com/pennsieve/model-service-serverless/api/models"
 )
 
-type Neo4jAPI interface {
-	BeginTransaction(ctx context.Context, configurers ...func(*neo4j.TransactionConfig)) (neo4j.ExplicitTransaction, error)
-	ExecuteRead(ctx context.Context, work neo4j.ManagedTransactionWork, configurers ...func(*neo4j.TransactionConfig)) (any, error)
-	ExecuteWrite(ctx context.Context, work neo4j.ManagedTransactionWork, configurers ...func(*neo4j.TransactionConfig)) (any, error)
-	Run(ctx context.Context, cypher string, params map[string]any, configurers ...func(*neo4j.TransactionConfig)) (neo4j.ResultWithContext, error)
-	Close(ctx context.Context) error
-}
-
 type GraphStore interface {
 	CreateRelationShips(datasetId int, organizationId int, userId string,
 		q models.PostRecordRelationshipRequestBody) ([]models.ShortRecordRelationShip, error)
@@ -23,14 +15,16 @@ type GraphStore interface {
 	Query(datasetId int, organizationId int, q models.QueryRequestBody) ([]models.Record, error)
 	Autocomplete(datasetId int, organizationId int, q models.AutocompleteRequestBody) ([]string, error)
 	ShortestPath(ctx context.Context, sourceModel models.Model, targetModels map[string]string) ([]dbtype.Path, error)
+	CreateModel(datasetId int, organizationId int, name string, displayName string, description string, userId string) (*models.Model, error)
+	InitOrgAndDataset(organizationId int, datasetId int, organizationNodeId string, datasetNodeId string) error
 }
 
-func NewGraphStore(db Neo4jAPI) *graphStore {
+func NewGraphStore(db neo4j.SessionWithContext) *graphStore {
 	return &graphStore{
 		db: db,
 	}
 }
 
 type graphStore struct {
-	db Neo4jAPI
+	db neo4j.SessionWithContext
 }

@@ -13,6 +13,8 @@ type GraphService interface {
 		datasetId int, organizationId int, userNodeId string) ([]models.ShortRecordRelationShip, error)
 	Autocomplete(parsedRequestBody models.AutocompleteRequestBody, datasetId int,
 		organizationId int) ([]string, error)
+	CreateModel(organizationId int, datasetId int, name string, displayName string, description string,
+		userNodeId string) (*models.Model, error)
 }
 
 func NewGraphService(store store.GraphStore) *graphService {
@@ -23,6 +25,14 @@ func NewGraphService(store store.GraphStore) *graphService {
 
 type graphService struct {
 	store store.GraphStore
+}
+
+func (s *graphService) CreateModel(organizationId int, datasetId int, name string, displayName string, description string, userNodeId string) (*models.Model, error) {
+	m, err := s.store.CreateModel(datasetId, organizationId, name, displayName, description, userNodeId)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (s *graphService) GetDatasetModels(datasetId int, organizationId int) ([]models.Model, error) {
