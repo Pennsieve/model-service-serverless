@@ -5,13 +5,17 @@ networks:
     driver: bridge
 
 services:
-  # Test Container for running tests locally (typically easier to just run go test ./...)
+  # Test Container for running tests locally
+  # You can also run the NEO4J container with "make start-neo4j-empty" and use "go test ./..."
+  # to test outside of docker.
   local_tests:
     build:
       context: .
       dockerfile: Dockerfile.test
     depends_on:
       - neo4j
+    environment:
+      - NEO4J_BOLT_URL=bolt://neo4j:7687
     env_file:
       - test.env
     volumes:
@@ -26,8 +30,10 @@ services:
       dockerfile: Dockerfile.test
     depends_on:
       - neo4j-ci
+    environment:
+      - NEO4J_BOLT_URL=bolt://neo4j-ci:7687
     env_file:
-      - test_ci.env
+      - test.env
     volumes:
       - $PWD:/go/src/github.com/pennsieve/model-service-serverless
     networks:
@@ -37,7 +43,7 @@ services:
   neo4j-ci:
     image: "neo4j:3.5.35-community"
     env_file:
-      - test_ci.env
+      - test.env
     volumes:
       # See https://community.neo4j.com/t/neo4j-db-3-5-docker-error/9913/7
       - ./plugins:/plugins
