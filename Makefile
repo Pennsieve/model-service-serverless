@@ -29,6 +29,7 @@ test:
 	mkdir -p data conf
 	chmod -R 777 data conf
 	docker-compose -f docker-compose.test.yml up --exit-code-from local_tests local_tests
+	make clean
 
 # Run dockerized tests (used on Jenkins)
 test-ci: install-apoc
