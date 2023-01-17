@@ -10,7 +10,7 @@ resource "aws_lambda_function" "service_lambda" {
   timeout           = 300
   memory_size       = 128
   s3_bucket         = var.lambda_bucket
-  s3_key            = "${var.service_name}/${var.service_name}-${var.version_number}.zip"
+  s3_key            = "${var.service_name}/${var.service_name}-${var.image_tag}.zip"
 
   vpc_config {
     subnet_ids         = tolist(data.terraform_remote_state.vpc.outputs.private_subnet_ids)
