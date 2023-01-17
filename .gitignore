@@ -31,5 +31,5 @@ api/vendor/
 # NEO4J Docker Folders
 plugins
 data
-config
+conf
 plugins
