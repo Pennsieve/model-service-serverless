@@ -17,7 +17,7 @@ services:
     environment:
       - NEO4J_BOLT_URL=bolt://neo4j:7687
     env_file:
-      - test.env
+      - dockertest.env
     volumes:
       - $PWD:/go/src/github.com/pennsieve/model-service-serverless
     networks:
@@ -33,7 +33,7 @@ services:
     environment:
       - NEO4J_BOLT_URL=bolt://neo4j-ci:7687
     env_file:
-      - test.env
+      - dockertest.env
     volumes:
       - $PWD:/go/src/github.com/pennsieve/model-service-serverless
     networks:
@@ -43,7 +43,7 @@ services:
   neo4j-ci:
     image: "neo4j:3.5.35-community"
     env_file:
-      - test.env
+      - dockertest.env
     volumes:
       # See https://community.neo4j.com/t/neo4j-db-3-5-docker-error/9913/7
       - ./plugins:/plugins
@@ -64,7 +64,7 @@ services:
       - ./data:/var/lib/neo4j/data
       - ./conf:/var/lib/neo4j/conf
     env_file:
-      - test.env
+      - dockertest.env
     restart: on-failure
     networks:
       - api-tests
