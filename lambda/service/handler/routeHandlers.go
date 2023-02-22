@@ -6,8 +6,8 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/pennsieve/model-service-serverless/api/models"
 	"github.com/pennsieve/model-service-serverless/api/service"
-	"github.com/pennsieve/pennsieve-go-api/pkg/authorizer"
-	"github.com/pennsieve/pennsieve-go-api/pkg/models/gateway"
+	"github.com/pennsieve/pennsieve-go-core/pkg/authorizer"
+	"github.com/pennsieve/pennsieve-go-core/pkg/models/gateway"
 	"log"
 )
 
