@@ -169,7 +169,7 @@ func getMetaDataForPackage(s service.GraphService, request events.APIGatewayV2HT
 
 	records, err := s.GetRecordsForPackage(int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), packageId, maxDepth)
 	if err != nil {
-		message := "Error: Could not get metadata for package"
+		message := fmt.Sprintf("Error: Could not get metadata for package: %v", err)
 		apiResponse = events.APIGatewayV2HTTPResponse{
 			Body: gateway.CreateErrorMessage(message, 500), StatusCode: 500}
 		return &apiResponse, nil
