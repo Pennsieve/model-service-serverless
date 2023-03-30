@@ -171,7 +171,7 @@ func (s *graphStore) GetRecordsForPackage(ctx context.Context, datasetId int, or
 	cql := fmt.Sprintf("MATCH (p:Package{package_node_id:'%s'})-[:`@IN_PACKAGE`]-(a:Record)", packageNodeId) +
 		fmt.Sprintf("<-[*0..%d]-(r:Record)--(m:Model)", maxDepth) +
 		fmt.Sprintf("-[:`@IN_DATASET`]->(:Dataset { id: %d })-[:`@IN_ORGANIZATION`]->(:Organization { id: %d }) ", datasetId, organizationId) +
-		"RETURN DISTINCT r as records ,m.name as models"
+		"RETURN DISTINCT r as records ,m.name as model"
 
 	result, err := s.db.Run(ctx, cql, nil)
 	if err != nil {
@@ -190,7 +190,7 @@ func (s *graphStore) GetRecordsForPackage(ctx context.Context, datasetId int, or
 
 		mn, exists := r.Get("model")
 		if !exists {
-			return nil, errors.New("records not returned from neo4j")
+			return nil, errors.New("model not returned from neo4j")
 		}
 		model := mn.(string)
 
