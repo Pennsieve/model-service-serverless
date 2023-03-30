@@ -17,6 +17,7 @@ type GraphStore interface {
 	ShortestPath(ctx context.Context, sourceModel models.Model, targetModels map[string]string) ([]dbtype.Path, error)
 	CreateModel(datasetId int, organizationId int, name string, displayName string, description string, userId string) (*models.Model, error)
 	InitOrgAndDataset(organizationId int, datasetId int, organizationNodeId string, datasetNodeId string) error
+	GetRecordsForPackage(ctx context.Context, datasetId int, organizationId int, packageNodeId string, maxDepth int) ([]models.Record, error)
 }
 
 func NewGraphStore(db neo4j.SessionWithContext) *graphStore {

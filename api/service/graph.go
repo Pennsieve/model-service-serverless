@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"github.com/pennsieve/model-service-serverless/api/models"
 	"github.com/pennsieve/model-service-serverless/api/store"
 )
@@ -15,6 +16,8 @@ type GraphService interface {
 		organizationId int) ([]string, error)
 	CreateModel(organizationId int, datasetId int, name string, displayName string, description string,
 		userNodeId string) (*models.Model, error)
+	GetRecordsForPackage(datasetId int, organizationId int, packageNodeId string,
+		maxDepth int) ([]models.Record, error)
 }
 
 func NewGraphService(store store.GraphStore) *graphService {
@@ -83,4 +86,17 @@ func (s *graphService) CreateRelationships(parsedRequestBody models.PostRecordRe
 	}
 
 	return response, nil
+}
+
+func (s *graphService) GetRecordsForPackage(datasetId int, organizationId int, packageNodeId string, maxDepth int) ([]models.Record, error) {
+
+	ctx := context.Background()
+	nodes, err := s.store.GetRecordsForPackage(ctx, datasetId, organizationId, packageNodeId, maxDepth)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return nodes, nil
+
 }

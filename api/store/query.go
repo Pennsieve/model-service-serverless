@@ -130,7 +130,7 @@ func (s *graphStore) Autocomplete(datasetId int, organizationId int, q models.Au
 	return values, nil
 }
 
-// shortestPath returns the shortest paths between source model and the target models
+// ShortestPath returns the shortest paths between source model and the target models
 func (s *graphStore) ShortestPath(ctx context.Context, sourceModel models.Model, targetModels map[string]string) ([]dbtype.Path, error) {
 
 	keys := make([]string, len(targetModels))
@@ -162,6 +162,54 @@ func (s *graphStore) ShortestPath(ctx context.Context, sourceModel models.Model,
 	}
 
 	return shortestPaths, nil
+}
+
+// GetRecordsForPackage returns a list of connected records
+func (s *graphStore) GetRecordsForPackage(ctx context.Context, datasetId int, organizationId int, packageNodeId string, maxDepth int) ([]models.Record, error) {
+	// MATCH p = (n:Package{package_node_id:'N:package:ab16ccc2-c5a5-4ead-a476-bc3f6e919364'})<-[*0..5]-(b:Record)-[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(:Dataset)-[:`@IN_ORGANIZATION`]->(:Organization) RETURN DISTINCT b as records ,m.name as models
+
+	cql := fmt.Sprintf("MATCH (p:Package{package_node_id:'%s'})-[:`@IN_PACKAGE`]-(a:Record)", packageNodeId) +
+		fmt.Sprintf("<-[*0..%d]-(r:Record)--(m:Model))", maxDepth) +
+		fmt.Sprintf("-[:`@IN_DATASET`]->(:Dataset { id: %d })-[:`@IN_ORGANIZATION`]->(:Organization { id: %d }) ", datasetId, organizationId) +
+		"RETURN DISTINCT r as records ,m.name as models"
+
+	result, err := s.db.Run(ctx, cql, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var records []models.Record
+	for result.Next(ctx) {
+		r := result.Record()
+		rn, exists := r.Get("records")
+		if !exists {
+			return nil, errors.New("records not returned from neo4j")
+		}
+
+		node := rn.(dbtype.Node)
+
+		mn, exists := r.Get("model")
+		if !exists {
+			return nil, errors.New("records not returned from neo4j")
+		}
+		model := mn.(string)
+
+		id := node.Props["@id"].(string)
+
+		// Delete internal properties from map
+		delete(node.Props, "@id")
+		delete(node.Props, "@sort_key")
+
+		newRec := models.Record{
+			ID:    id,
+			Model: model,
+			Props: node.Props,
+		}
+		records = append(records, newRec)
+
+	}
+
+	return records, nil
 }
 
 // getTargetModelsMap returns a map between model name and model object

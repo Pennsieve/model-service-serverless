@@ -91,6 +91,15 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 				apiResponse, err = postGraphRecordRelationshipRoute(graphService, request, claims)
 			}
 		}
+
+	case "/metadata/package":
+		switch request.RequestContext.HTTP.Method {
+		case "GET":
+			//	Return all models for a specific dataset
+			if authorized = authorizer.HasRole(*claims, permissions.ViewRecords); authorized {
+				apiResponse, err = getMetaDataForPackage(graphService, request, claims)
+			}
+		}
 	}
 
 	// Return unauthorized if

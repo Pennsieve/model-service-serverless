@@ -149,3 +149,35 @@ func postAutocompleteRoute(s service.GraphService, request events.APIGatewayV2HT
 
 	return &apiResponse, nil
 }
+
+func getMetaDataForPackage(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
+
+	maxDepth := 10
+	apiResponse := events.APIGatewayV2HTTPResponse{}
+	queryParams := request.QueryStringParameters
+
+	// Get Manifest ID
+	var packageId string
+	var found bool
+	if packageId, found = queryParams["package_id"]; !found {
+		message := "Error: Package ID not specified"
+		apiResponse = events.APIGatewayV2HTTPResponse{
+			Body: gateway.CreateErrorMessage(message, 400), StatusCode: 400}
+		return &apiResponse, nil
+	}
+
+	records, err := s.GetRecordsForPackage(int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), packageId, maxDepth)
+	if err != nil {
+		message := "Error: Could not get metadata for package"
+		apiResponse = events.APIGatewayV2HTTPResponse{
+			Body: gateway.CreateErrorMessage(message, 500), StatusCode: 500}
+		return &apiResponse, nil
+	}
+
+	jsonBody, _ := json.Marshal(records)
+	apiResponse = events.APIGatewayV2HTTPResponse{Body: string(jsonBody), StatusCode: 200}
+
+	return &apiResponse, nil
+
+}
