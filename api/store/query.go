@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j/dbtype"
 	"github.com/pennsieve/model-service-serverless/api/models"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"strings"
 )
 
@@ -169,7 +169,7 @@ func (s *graphStore) GetRecordsForPackage(ctx context.Context, datasetId int, or
 	// MATCH p = (n:Package{package_node_id:'N:package:ab16ccc2-c5a5-4ead-a476-bc3f6e919364'})<-[*0..5]-(b:Record)-[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(:Dataset)-[:`@IN_ORGANIZATION`]->(:Organization) RETURN DISTINCT b as records ,m.name as models
 
 	cql := fmt.Sprintf("MATCH (p:Package{package_node_id:'%s'})-[:`@IN_PACKAGE`]-(a:Record)", packageNodeId) +
-		fmt.Sprintf("<-[*0..%d]-(r:Record)--(m:Model))", maxDepth) +
+		fmt.Sprintf("<-[*0..%d]-(r:Record)--(m:Model)", maxDepth) +
 		fmt.Sprintf("-[:`@IN_DATASET`]->(:Dataset { id: %d })-[:`@IN_ORGANIZATION`]->(:Organization { id: %d }) ", datasetId, organizationId) +
 		"RETURN DISTINCT r as records ,m.name as models"
 

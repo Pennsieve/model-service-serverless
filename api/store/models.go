@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/pennsieve/model-service-serverless/api/models"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"regexp"
 	"strings"
 	"time"

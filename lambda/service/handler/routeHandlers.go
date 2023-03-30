@@ -8,7 +8,7 @@ import (
 	"github.com/pennsieve/model-service-serverless/api/service"
 	"github.com/pennsieve/pennsieve-go-core/pkg/authorizer"
 	"github.com/pennsieve/pennsieve-go-core/pkg/models/gateway"
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 func getDatasetModelsRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,

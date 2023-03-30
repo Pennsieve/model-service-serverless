@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/pennsieve/model-service-serverless/api/models"
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 // CreateRelationShips creates a set of relationships between records that are provided by the user.

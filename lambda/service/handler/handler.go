@@ -8,7 +8,8 @@ import (
 	"github.com/pennsieve/model-service-serverless/api/store"
 	"github.com/pennsieve/pennsieve-go-core/pkg/authorizer"
 	"github.com/pennsieve/pennsieve-go-core/pkg/models/permissions"
-	"log"
+	log "github.com/sirupsen/logrus"
+	"os"
 	"regexp"
 	"time"
 )
@@ -17,6 +18,14 @@ var neo4jDriver neo4j.DriverWithContext
 
 // init runs on cold start of lambda and fetches variables and created neo4j driver.
 func init() {
+
+	log.SetFormatter(&log.JSONFormatter{})
+	ll, err := log.ParseLevel(os.Getenv("LOG_LEVEL"))
+	if err != nil {
+		log.SetLevel(log.InfoLevel)
+	} else {
+		log.SetLevel(ll)
+	}
 
 	// Get the Model-Service variables from SSM.
 	ssmVars, err := fetchSSMVariables()
