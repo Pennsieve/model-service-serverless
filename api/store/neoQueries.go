@@ -422,13 +422,12 @@ func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, or
 	cql := "" +
 		"MATCH (p:Package)<-[*0..$maxDepth]-(r:Record)-" +
 		"[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(:Dataset{id: $datasetId })-[:`@IN_ORGANIZATION`]->(:Organization{id: $orgId }) " +
-		"WHERE n.package_id IN [$ancestorIds] RETURN DISTINCT r as records ,m.name as model"
+		fmt.Sprintf("WHERE n.package_id IN [%s] RETURN DISTINCT r as records ,m.name as model", ancestorIds)
 
 	result, err := q.db.Run(ctx, cql, map[string]any{
-		"maxDepth":    maxDepth,
-		"datasetId":   datasetId,
-		"orgId":       organizationId,
-		"ancestorIds": ancestorIds})
+		"maxDepth":  maxDepth,
+		"datasetId": datasetId,
+		"orgId":     organizationId})
 
 	if err != nil {
 		return nil, err
