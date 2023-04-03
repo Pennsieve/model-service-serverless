@@ -53,6 +53,7 @@ data "aws_iam_policy_document" "model_service_iam_policy_document" {
     sid    = "ModelServiceLambdaPermissions"
     effect = "Allow"
     actions = [
+      "rds-db:connect",
       "logs:CreateLogGroup",
       "logs:CreateLogStream",
       "logs:PutDestination",
