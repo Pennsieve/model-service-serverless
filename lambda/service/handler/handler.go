@@ -66,7 +66,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 	}))
 	defer neoDb.Close(context.Background())
 
-	db, err := pgQueries.ConnectRDS()
+	db, err := pgQueries.ConnectRDSWithOrg(int(claims.OrgClaim.IntId))
 	defer db.Close()
 	if err != nil {
 		return apiResponse, err
