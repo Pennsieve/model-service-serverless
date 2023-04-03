@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
-	"github.com/pennsieve/model-service-serverless/api/service"
+	"github.com/pennsieve/model-service-serverless/api/shared"
 	"github.com/pennsieve/model-service-serverless/api/store"
 	"github.com/pennsieve/pennsieve-go-core/pkg/authorizer"
 	"github.com/pennsieve/pennsieve-go-core/pkg/models/permissions"
@@ -60,14 +60,13 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 	authorized := false
 
 	// Initiate NEO4j session
-	db := neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
+	db := shared.NewNeo4jSession(neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
 		AccessMode: neo4j.AccessModeRead,
-	})
+	}))
 	defer db.Close(context.Background())
 
 	// Create GraphStore object with initiated db.
-	graphStore := store.NewGraphStore(db)
-	graphService := service.NewGraphService(graphStore)
+	graphStore := store.NewModelServiceStore(db)
 
 	switch routeKey {
 	case "/metadata/models":
@@ -75,21 +74,21 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 		case "GET":
 			//	Return all models for a specific dataset
 			if authorized = authorizer.HasRole(*claims, permissions.ViewGraphSchema); authorized {
-				apiResponse, err = getDatasetModelsRoute(graphService, request, claims)
+				apiResponse, err = getDatasetModelsRoute(graphStore, request, claims)
 			}
 		}
 	case "/metadata/query":
 		switch request.RequestContext.HTTP.Method {
 		case "POST":
 			if authorized = authorizer.HasRole(*claims, permissions.ViewRecords); authorized {
-				apiResponse, err = postGraphQueryRoute(graphService, request, claims)
+				apiResponse, err = postGraphQueryRoute(graphStore, request, claims)
 			}
 		}
 	case "/metadata/query/autocomplete":
 		switch request.RequestContext.HTTP.Method {
 		case "POST":
 			if authorized = authorizer.HasRole(*claims, permissions.ViewRecords); authorized {
-				apiResponse, err = postAutocompleteRoute(graphService, request, claims)
+				apiResponse, err = postAutocompleteRoute(graphStore, request, claims)
 			}
 		}
 
@@ -97,7 +96,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 		switch request.RequestContext.HTTP.Method {
 		case "POST":
 			if authorized = authorizer.HasRole(*claims, permissions.CreateDeleteRecord); authorized {
-				apiResponse, err = postGraphRecordRelationshipRoute(graphService, request, claims)
+				apiResponse, err = postGraphRecordRelationshipRoute(graphStore, request, claims)
 			}
 		}
 
@@ -106,7 +105,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 		case "GET":
 			//	Return all models for a specific dataset
 			if authorized = authorizer.HasRole(*claims, permissions.ViewRecords); authorized {
-				apiResponse, err = getMetaDataForPackage(graphService, request, claims)
+				apiResponse, err = getMetaDataForPackage(graphStore, request, claims)
 			}
 		}
 	}

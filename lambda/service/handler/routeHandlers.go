@@ -1,22 +1,24 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/pennsieve/model-service-serverless/api/models"
-	"github.com/pennsieve/model-service-serverless/api/service"
+	"github.com/pennsieve/model-service-serverless/api/store"
 	"github.com/pennsieve/pennsieve-go-core/pkg/authorizer"
 	"github.com/pennsieve/pennsieve-go-core/pkg/models/gateway"
 	log "github.com/sirupsen/logrus"
 )
 
-func getDatasetModelsRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+func getDatasetModelsRoute(s *store.ModelServiceStore, request events.APIGatewayV2HTTPRequest,
 	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	// Create database session and defer closing the session
 
 	// Get the models from Neo4J
-	results, err := s.GetDatasetModels(int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
+	ctx := context.Background()
+	results, err := s.GetDatasetModels(ctx, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +32,7 @@ func getDatasetModelsRoute(s service.GraphService, request events.APIGatewayV2HT
 	return &apiResponse, nil
 }
 
-func postGraphQueryRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+func postGraphQueryRoute(s *store.ModelServiceStore, request events.APIGatewayV2HTTPRequest,
 	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	apiResponse := events.APIGatewayV2HTTPResponse{}
 
@@ -42,7 +44,9 @@ func postGraphQueryRoute(s service.GraphService, request events.APIGatewayV2HTTP
 		return &apiResponse, nil
 	}
 
-	records, err := s.QueryGraph(parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
+	ctx := context.Background()
+
+	records, err := s.QueryGraph(ctx, parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
 
 	if err != nil {
 		switch err.(type) {
@@ -73,7 +77,7 @@ func postGraphQueryRoute(s service.GraphService, request events.APIGatewayV2HTTP
 }
 
 // postGraphRecordRelationshipRoute creates 1 or more relationships between existing records
-func postGraphRecordRelationshipRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+func postGraphRecordRelationshipRoute(s *store.ModelServiceStore, request events.APIGatewayV2HTTPRequest,
 	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	apiResponse := events.APIGatewayV2HTTPResponse{}
 
@@ -85,7 +89,9 @@ func postGraphRecordRelationshipRoute(s service.GraphService, request events.API
 		return &apiResponse, nil
 	}
 
-	response, err := s.CreateRelationships(parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), claims.UserClaim.NodeId)
+	ctx := context.Background()
+
+	response, err := s.CreateRelationships(ctx, parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), claims.UserClaim.NodeId)
 	if err != nil {
 		message := err.Error()
 		apiResponse = events.APIGatewayV2HTTPResponse{
@@ -102,7 +108,7 @@ func postGraphRecordRelationshipRoute(s service.GraphService, request events.API
 	return &apiResponse, nil
 }
 
-func postAutocompleteRoute(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+func postAutocompleteRoute(s *store.ModelServiceStore, request events.APIGatewayV2HTTPRequest,
 	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	apiResponse := events.APIGatewayV2HTTPResponse{}
 
@@ -114,7 +120,9 @@ func postAutocompleteRoute(s service.GraphService, request events.APIGatewayV2HT
 		return &apiResponse, nil
 	}
 
-	values, err := s.Autocomplete(parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
+	ctx := context.Background()
+
+	values, err := s.Autocomplete(ctx, parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
 
 	if err != nil {
 		switch err.(type) {
@@ -150,7 +158,7 @@ func postAutocompleteRoute(s service.GraphService, request events.APIGatewayV2HT
 	return &apiResponse, nil
 }
 
-func getMetaDataForPackage(s service.GraphService, request events.APIGatewayV2HTTPRequest,
+func getMetaDataForPackage(s *store.ModelServiceStore, request events.APIGatewayV2HTTPRequest,
 	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 
 	maxDepth := 10
@@ -167,7 +175,8 @@ func getMetaDataForPackage(s service.GraphService, request events.APIGatewayV2HT
 		return &apiResponse, nil
 	}
 
-	records, err := s.GetRecordsForPackage(int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), packageId, maxDepth)
+	ctx := context.Background()
+	records, err := s.GetRecordsForPackage(ctx, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId), packageId, maxDepth)
 	if err != nil {
 		message := fmt.Sprintf("Error: Could not get metadata for package: %v", err)
 		apiResponse = events.APIGatewayV2HTTPResponse{
