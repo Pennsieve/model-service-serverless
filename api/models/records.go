@@ -52,6 +52,6 @@ type PackageMetadata struct {
 }
 
 type OriginRecord struct {
-	Id     int    `json:"id"`
+	Id     int64  `json:"id"`
 	NodeId string `json:"node_id"`
 }

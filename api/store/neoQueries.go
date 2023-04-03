@@ -452,7 +452,7 @@ func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, or
 		}
 		or := mo.(map[string]interface{})
 		origin := models.OriginRecord{
-			Id:     or["id"].(int),
+			Id:     or["id"].(int64),
 			NodeId: or["node_id"].(string),
 		}
 
