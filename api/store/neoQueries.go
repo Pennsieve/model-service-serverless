@@ -450,7 +450,11 @@ func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, or
 		if !exists {
 			return nil, errors.New("origin not returned from neo4j")
 		}
-		origin := mo.(models.OriginRecord)
+		or := mo.(map[string]interface{})
+		origin := models.OriginRecord{
+			Id:     or["id"].(int),
+			NodeId: or["node_id"].(string),
+		}
 
 		id := node.Props["@id"].(string)
 
