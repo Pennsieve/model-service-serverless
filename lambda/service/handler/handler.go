@@ -8,6 +8,7 @@ import (
 	"github.com/pennsieve/model-service-serverless/api/store"
 	"github.com/pennsieve/pennsieve-go-core/pkg/authorizer"
 	"github.com/pennsieve/pennsieve-go-core/pkg/models/permissions"
+	pgQueries "github.com/pennsieve/pennsieve-go-core/pkg/queries/pgdb"
 	log "github.com/sirupsen/logrus"
 	"os"
 	"regexp"
@@ -60,13 +61,19 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 	authorized := false
 
 	// Initiate NEO4j session
-	db := shared.NewNeo4jSession(neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
+	neoDb := shared.NewNeo4jSession(neo4jDriver.NewSession(context.Background(), neo4j.SessionConfig{
 		AccessMode: neo4j.AccessModeRead,
 	}))
-	defer db.Close(context.Background())
+	defer neoDb.Close(context.Background())
+
+	db, err := pgQueries.ConnectRDS()
+	defer db.Close()
+	if err != nil {
+		return apiResponse, err
+	}
 
 	// Create GraphStore object with initiated db.
-	graphStore := store.NewModelServiceStore(db)
+	graphStore := store.NewModelServiceStore(db, neoDb)
 
 	switch routeKey {
 	case "/metadata/models":

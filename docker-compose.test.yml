@@ -14,8 +14,10 @@ services:
       dockerfile: Dockerfile.test
     depends_on:
       - neo4j
+      - pennsievedb
     environment:
       - NEO4J_BOLT_URL=bolt://neo4j:7687
+      - POSTGRES_HOST=pennsievedb
     env_file:
       - dockertest.env
     volumes:
@@ -30,8 +32,10 @@ services:
       dockerfile: Dockerfile.test
     depends_on:
       - neo4j-ci
+      - pennsievedb-ci
     environment:
       - NEO4J_BOLT_URL=bolt://neo4j-ci:7687
+      - POSTGRES_HOST=pennsievedb-ci
     env_file:
       - dockertest.env
     volumes:
@@ -68,3 +72,18 @@ services:
     restart: on-failure
     networks:
       - api-tests
+
+  pennsievedb:
+    image: pennsieve/pennsievedb:V20230315145959-seed
+    restart: always
+    ports:
+      - "5432:5432"
+    networks:
+      - api-tests
+
+  pennsievedb-ci:
+    image: pennsieve/pennsievedb:V20230315145959-seed
+    restart: always
+    networks:
+      - api-tests
+

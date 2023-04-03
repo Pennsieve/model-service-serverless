@@ -2,27 +2,38 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/pennsieve/model-service-serverless/api/models"
-	"github.com/pennsieve/model-service-serverless/api/queries"
 	"github.com/pennsieve/model-service-serverless/api/shared"
 )
 
 // ModelServiceStore provides the Queries interface and a db instance.
 type ModelServiceStore struct {
-	neo   *queries.NeoQueries
+	neo   *NeoQueries
 	neodb *shared.Neo4jSession
+	pgdb  *sql.DB
+	pg    *ModelServicePgQueries
 }
 
 // NewModelServiceStore returns a UploadHandlerStore object which implements the Queries
-func NewModelServiceStore(neo *shared.Neo4jSession) *ModelServiceStore {
+func NewModelServiceStore(db *sql.DB, neo *shared.Neo4jSession) *ModelServiceStore {
 	return &ModelServiceStore{
-		neo:   queries.NewNeoQueries(neo),
+		pgdb:  db,
+		pg:    NewModelServicePgQueries(db),
+		neo:   NewNeoQueries(neo),
 		neodb: neo,
 	}
 }
 
-func (s *ModelServiceStore) execTx(ctx context.Context, fn func(queries *queries.NeoQueries) error) error {
+// WithOrg sets the search path for the pg queries
+func (s *ModelServiceStore) WithOrg(orgId int) error {
+	_, err := s.pg.WithOrg(orgId)
+	return err
+
+}
+
+func (s *ModelServiceStore) execTx(ctx context.Context, fn func(queries *NeoQueries) error) error {
 
 	// NOTE: When you create a new transaction (as below), the s.pgdb is NOT part of the transaction.
 	// This has the following impact
@@ -38,7 +49,7 @@ func (s *ModelServiceStore) execTx(ctx context.Context, fn func(queries *queries
 		return err
 	}
 
-	q := queries.NewNeoQueries(tx)
+	q := NewNeoQueries(tx)
 	err = fn(q)
 	if err != nil {
 		if rbErr := tx.Rollback(ctx); rbErr != nil {
@@ -53,7 +64,7 @@ func (s *ModelServiceStore) execTx(ctx context.Context, fn func(queries *queries
 func (s *ModelServiceStore) CreateModelTx(ctx context.Context, datasetId int, organizationId int, name string, displayName string, description string, userId string) (*models.Model, error) {
 
 	var createdModel *models.Model
-	err := s.execTx(ctx, func(qtx *queries.NeoQueries) error {
+	err := s.execTx(ctx, func(qtx *NeoQueries) error {
 		var err error
 		createdModel, err = qtx.CreateModel(ctx, datasetId, organizationId, name, displayName, description, userId)
 		return err
@@ -109,7 +120,7 @@ func (s *ModelServiceStore) CreateRelationships(ctx context.Context, parsedReque
 	datasetId int, organizationId int, userNodeId string) ([]models.ShortRecordRelationShip, error) {
 
 	var response []models.ShortRecordRelationShip
-	err := s.execTx(ctx, func(qtx *queries.NeoQueries) error {
+	err := s.execTx(ctx, func(qtx *NeoQueries) error {
 		var err error
 		response, err = s.neo.CreateRelationShips(ctx, datasetId, organizationId, userNodeId, parsedRequestBody)
 		return err
@@ -123,7 +134,19 @@ func (s *ModelServiceStore) CreateRelationships(ctx context.Context, parsedReque
 
 func (s *ModelServiceStore) GetRecordsForPackage(ctx context.Context, datasetId int, organizationId int, packageNodeId string, maxDepth int) ([]models.Record, error) {
 
-	nodes, err := s.neo.GetRecordsForPackage(ctx, datasetId, organizationId, packageNodeId, maxDepth)
+	// Get the package and ancestors based on folder structure on the platform
+	packages, err := s.pg.GetPackageAncestors(ctx, packageNodeId)
+	if err != nil {
+		return nil, err
+	}
+
+	var packageIds []int
+	for _, p := range packages {
+		packageIds = append(packageIds, int(p.Id))
+	}
+
+	// Get all records associated with the hierarchical record structure for record and ancestors
+	nodes, err := s.neo.GetRecordsForPackage(ctx, datasetId, organizationId, packageIds, maxDepth)
 
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-package queries
+package store
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/pennsieve/model-service-serverless/api/shared"
 	log "github.com/sirupsen/logrus"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -404,15 +405,31 @@ func (q *NeoQueries) ShortestPath(ctx context.Context, sourceModel models.Model,
 }
 
 // GetRecordsForPackage returns a list of connected records
-func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, organizationId int, packageNodeId string, maxDepth int) ([]models.Record, error) {
+func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, organizationId int, packageIds []int, maxDepth int) ([]models.Record, error) {
 	// MATCH p = (n:Package{package_node_id:'N:package:ab16ccc2-c5a5-4ead-a476-bc3f6e919364'})<-[*0..5]-(b:Record)-[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(:Dataset)-[:`@IN_ORGANIZATION`]->(:Organization) RETURN DISTINCT b as records ,m.name as models
 
-	cql := fmt.Sprintf("MATCH (p:Package{package_node_id:'%s'})-[:`@IN_PACKAGE`]-(a:Record)", packageNodeId) +
-		fmt.Sprintf("<-[*0..%d]-(r:Record)--(m:Model)", maxDepth) +
-		fmt.Sprintf("-[:`@IN_DATASET`]->(:Dataset { id: %d })-[:`@IN_ORGANIZATION`]->(:Organization { id: %d }) ", datasetId, organizationId) +
-		"RETURN DISTINCT r as records ,m.name as model"
+	//cql := fmt.Sprintf("MATCH (p:Package{package_node_id:'%s'})-[:`@IN_PACKAGE`]-(a:Record)", packageNodeId) +
+	//	fmt.Sprintf("<-[*0..%d]-(r:Record)--(m:Model)", maxDepth) +
+	//	fmt.Sprintf("-[:`@IN_DATASET`]->(:Dataset { id: %d })-[:`@IN_ORGANIZATION`]->(:Organization { id: %d }) ", datasetId, organizationId) +
+	//	"RETURN DISTINCT r as records ,m.name as model"
 
-	result, err := q.db.Run(ctx, cql, nil)
+	var IDs []string
+	for _, i := range packageIds {
+		IDs = append(IDs, strconv.Itoa(i))
+	}
+	ancestorIds := strings.Join(IDs, ",")
+
+	cql := "" +
+		"MATCH (p:Package)<-[*0..$maxDepth]-(r:Record)-" +
+		"[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(:Dataset{id: $datasetId })-[:`@IN_ORGANIZATION`]->(:Organization{id: $orgId }) " +
+		"WHERE n.package_id IN [$ancestorIds] RETURN DISTINCT r as records ,m.name as model"
+
+	result, err := q.db.Run(ctx, cql, map[string]any{
+		"maxDepth":    maxDepth,
+		"datasetId":   datasetId,
+		"orgId":       organizationId,
+		"ancestorIds": ancestorIds})
+
 	if err != nil {
 		return nil, err
 	}
