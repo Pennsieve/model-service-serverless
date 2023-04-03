@@ -132,7 +132,7 @@ func (s *ModelServiceStore) CreateRelationships(ctx context.Context, parsedReque
 	return response, nil
 }
 
-func (s *ModelServiceStore) GetRecordsForPackage(ctx context.Context, datasetId int, organizationId int, packageNodeId string, maxDepth int) ([]models.Record, error) {
+func (s *ModelServiceStore) GetRecordsForPackage(ctx context.Context, datasetId int, organizationId int, packageNodeId string, maxDepth int) ([]models.PackageMetadata, error) {
 
 	// Get the package and ancestors based on folder structure on the platform
 	packages, err := s.pg.GetPackageAncestors(ctx, packageNodeId)

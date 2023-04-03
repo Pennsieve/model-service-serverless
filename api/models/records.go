@@ -43,3 +43,15 @@ type Record struct {
 	Model string                 `json:"model"`
 	Props map[string]interface{} `json:"props"`
 }
+
+type PackageMetadata struct {
+	ID     string                 `json:"id"`
+	Model  string                 `json:"model"`
+	Props  map[string]interface{} `json:"props"`
+	Origin OriginRecord           `json:"origin"`
+}
+
+type OriginRecord struct {
+	Id     int    `json:"id"`
+	NodeId string `json:"node_id"`
+}
