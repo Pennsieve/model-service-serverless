@@ -4,6 +4,8 @@ type QueryRequestBody struct {
 	Model   string    `json:"model"`
 	Filters []Filters `json:"filters"`
 	OrderBy string    `json:"order_by"`
+	Limit   int       `json:"limit"`
+	Offset  int       `json:"offset"`
 }
 type Filters struct {
 	Model    string `json:"model"`

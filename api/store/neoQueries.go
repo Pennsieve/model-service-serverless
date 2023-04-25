@@ -306,7 +306,7 @@ func (q *NeoQueries) Query(ctx context.Context, datasetId int, organizationId in
 
 	log.Debug("Shortest Paths: ", shortestPaths)
 
-	query, err := generateQuery(sourceModel, shortestPaths, req.Filters, orderBy, false, "", "")
+	query, err := generateQuery(sourceModel, shortestPaths, req.Filters, orderBy, false, "", "", req.Limit, req.Offset)
 	if err != nil {
 		log.Error("Error generating query: ", err)
 		return nil, err
@@ -363,7 +363,7 @@ func (q *NeoQueries) Autocomplete(ctx context.Context, datasetId int, organizati
 
 	shortestPaths, err := q.ShortestPath(ctx, sourceModel, targetModels)
 
-	query, err := generateQuery(sourceModel, shortestPaths, req.Filters, orderBy, true, req.Text, req.Property)
+	query, err := generateQuery(sourceModel, shortestPaths, req.Filters, orderBy, true, req.Text, req.Property, 20, 0)
 
 	log.Println(query)
 
@@ -651,7 +651,7 @@ func getTargetModelsMap(filters []models.Filters, sourceModel models.Model, mode
 
 // generateQuery returns a Cypher query based on the provided paths and filters.
 func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []models.Filters,
-	orderByProp string, autocomplete bool, autocompleteText string, autocompletePropName string) (string, error) {
+	orderByProp string, autocomplete bool, autocompleteText string, autocompletePropName string, limit int, offset int) (string, error) {
 
 	if orderByProp == "" {
 		return "", errors.New("orderBy cannot be empty")
@@ -759,9 +759,9 @@ func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []mode
 		}
 
 		queryStr.WriteString(fmt.Sprintf("%s.%s =~ '(?i).*%s.*' ", sourceModel.Name, autocompletePropName, autocompleteText))
-		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s.%s AS value LIMIT %d", sourceModel.Name, autocompletePropName, 20))
+		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s.%s AS value LIMIT %d SKIP %d", sourceModel.Name, autocompletePropName, limit, offset))
 	} else {
-		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s AS records ORDER BY %s.%s LIMIT %d", sourceModel.Name, sourceModel.Name, orderByProp, 100))
+		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s AS records ORDER BY %s.%s LIMIT %d SKIP %d", sourceModel.Name, sourceModel.Name, orderByProp, limit, offset))
 	}
 
 	return queryStr.String(), nil
