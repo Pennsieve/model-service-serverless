@@ -770,8 +770,8 @@ func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []mode
 // validOperator checks if the requested operator is one of the allowed methods.
 func validOperator(op string) bool {
 	var validOperators = [...]string{
-		"IS", "IS NOT", "EQUALS", "NOT EQUALS", "LESS THAN", "LESS THAN EQUALS",
-		"GREATER THAN", "GREATER THAN EQUALS", "STARTS WITH", "CONTAINS"}
+		"=", "<>", "<", "<=",
+		">", ">=", "=~", "STARTS WITH", "ENDS WITH", "CONTAINS"}
 
 	for _, o := range validOperators {
 		if op == o {
