@@ -293,10 +293,26 @@ func (q *NeoQueries) Query(ctx context.Context, datasetId int, organizationId in
 	}
 
 	targetModels, err := getTargetModelsMap(req.Filters, sourceModel, modelMap)
+	if err != nil {
+		log.Error("Error getting the target models: ", err)
+		return nil, err
+	}
 
 	shortestPaths, err := q.ShortestPath(ctx, sourceModel, targetModels)
+	if err != nil {
+		log.Error("Error getting shortest paths: ", err)
+		return nil, err
+	}
+
+	log.Debug("Shortest Paths: ", shortestPaths)
 
 	query, err := generateQuery(sourceModel, shortestPaths, req.Filters, orderBy, false, "", "")
+	if err != nil {
+		log.Error("Error generating query: ", err)
+		return nil, err
+	}
+
+	log.Debug("Query: ", query)
 
 	result, err := q.db.Run(ctx, query, nil)
 	if err != nil {
