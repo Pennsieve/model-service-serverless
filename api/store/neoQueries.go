@@ -759,9 +759,9 @@ func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []mode
 		}
 
 		queryStr.WriteString(fmt.Sprintf("%s.%s =~ '(?i).*%s.*' ", sourceModel.Name, autocompletePropName, autocompleteText))
-		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s.%s AS value LIMIT %d SKIP %d", sourceModel.Name, autocompletePropName, limit, offset))
+		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s.%s AS value LIMIT %d", sourceModel.Name, autocompletePropName, limit))
 	} else {
-		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s AS records ORDER BY %s.%s LIMIT %d SKIP %d", sourceModel.Name, sourceModel.Name, orderByProp, limit, offset))
+		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s AS records ORDER BY %s.%s SKIP %d LIMIT %d", sourceModel.Name, sourceModel.Name, orderByProp, offset, limit))
 	}
 
 	return queryStr.String(), nil
