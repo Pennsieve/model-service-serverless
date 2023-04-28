@@ -257,7 +257,7 @@ func (q *NeoQueries) GetModelProps(ctx context.Context, datasetId int, organizat
 
 // QueryTotal returns the total number of results for a particular query
 func (q *NeoQueries) QueryTotal(ctx context.Context, sourceModel models.Model, shortestPaths []dbtype.Path, filters []query.Filters,
-	orderBy string, limit int, offset int) (int, error) {
+	orderBy string, limit int, offset int) (int64, error) {
 
 	queryParams := query.FormatParams{ResultType: query.COUNT}
 
@@ -283,7 +283,7 @@ func (q *NeoQueries) QueryTotal(ctx context.Context, sourceModel models.Model, s
 		return 0, errors.New("result does not contain property 'total'")
 	}
 
-	totalNrRecords := r.(int)
+	totalNrRecords := r.(int64)
 	return totalNrRecords, nil
 }
 

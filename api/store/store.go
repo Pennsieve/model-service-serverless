@@ -159,7 +159,7 @@ func (s *ModelServiceStore) QueryGraph(ctx context.Context, req query.QueryReque
 		ModelName: req.Model,
 		Limit:     req.Limit,
 		Offset:    req.Offset,
-		Total:     total,
+		Total:     int(total),
 		Records:   nodes,
 	}
 
