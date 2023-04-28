@@ -38,7 +38,7 @@ func (o Operator) String() string {
 	case GREATER_THAN_EQUALS:
 		return "GREATER_THAN_EQUALS"
 	case STARTS_WITH:
-		return "STARTS_WITHIS"
+		return "STARTS_WITH"
 	case CONTAINS:
 		return "CONTAINS"
 	}

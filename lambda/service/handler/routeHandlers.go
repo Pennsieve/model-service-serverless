@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/pennsieve/model-service-serverless/api/models"
+	"github.com/pennsieve/model-service-serverless/api/models/query"
 	"github.com/pennsieve/model-service-serverless/api/store"
 	"github.com/pennsieve/pennsieve-go-core/pkg/authorizer"
 	"github.com/pennsieve/pennsieve-go-core/pkg/models/gateway"
@@ -36,7 +37,7 @@ func postGraphQueryRoute(s *store.ModelServiceStore, request events.APIGatewayV2
 	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	apiResponse := events.APIGatewayV2HTTPResponse{}
 
-	parsedRequestBody := models.QueryRequestBody{}
+	parsedRequestBody := query.QueryRequestBody{}
 	if err := json.Unmarshal([]byte(request.Body), &parsedRequestBody); err != nil {
 		message := "Error: Unable to parse body: " + fmt.Sprint(err)
 		apiResponse = events.APIGatewayV2HTTPResponse{
@@ -46,7 +47,7 @@ func postGraphQueryRoute(s *store.ModelServiceStore, request events.APIGatewayV2
 
 	ctx := context.Background()
 
-	records, err := s.QueryGraph(ctx, parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
+	response, err := s.QueryGraph(ctx, parsedRequestBody, int(claims.DatasetClaim.IntId), int(claims.OrgClaim.IntId))
 
 	if err != nil {
 		switch err.(type) {
@@ -70,7 +71,7 @@ func postGraphQueryRoute(s *store.ModelServiceStore, request events.APIGatewayV2
 	}
 
 	// CREATING API RESPONSE
-	jsonBody, _ := json.Marshal(records)
+	jsonBody, _ := json.Marshal(response)
 	apiResponse = events.APIGatewayV2HTTPResponse{Body: string(jsonBody), StatusCode: 200}
 
 	return &apiResponse, nil
@@ -112,7 +113,7 @@ func postAutocompleteRoute(s *store.ModelServiceStore, request events.APIGateway
 	claims *authorizer.Claims) (*events.APIGatewayV2HTTPResponse, error) {
 	apiResponse := events.APIGatewayV2HTTPResponse{}
 
-	parsedRequestBody := models.AutocompleteRequestBody{}
+	parsedRequestBody := query.AutocompleteRequestBody{}
 	if err := json.Unmarshal([]byte(request.Body), &parsedRequestBody); err != nil {
 		message := "Error: Unable to parse body: " + fmt.Sprint(err)
 		apiResponse = events.APIGatewayV2HTTPResponse{
@@ -146,7 +147,7 @@ func postAutocompleteRoute(s *store.ModelServiceStore, request events.APIGateway
 	}
 
 	// CREATING API RESPONSE
-	responseBody := models.AutocompleteResponse{
+	responseBody := query.AutocompleteResponse{
 		ModelName: parsedRequestBody.Model,
 		Property:  parsedRequestBody.Property,
 		Values:    values,

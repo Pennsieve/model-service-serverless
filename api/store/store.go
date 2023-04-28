@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/pennsieve/model-service-serverless/api/models"
+	"github.com/pennsieve/model-service-serverless/api/models/query"
 	"github.com/pennsieve/model-service-serverless/api/shared"
+	log "github.com/sirupsen/logrus"
 )
 
 // ModelServiceStore provides the Queries interface and a db instance.
@@ -92,19 +94,79 @@ func (s *ModelServiceStore) GetDatasetModels(ctx context.Context, datasetId int,
 	return models, nil
 }
 
-func (s *ModelServiceStore) QueryGraph(ctx context.Context, parsedRequestBody models.QueryRequestBody, datasetId int,
-	organizationId int) ([]models.Record, error) {
+func (s *ModelServiceStore) QueryGraph(ctx context.Context, req query.QueryRequestBody, datasetId int,
+	organizationId int) (*query.QueryResponse, error) {
 
-	nodes, err := s.neo.Query(ctx, datasetId, organizationId, parsedRequestBody)
+	modelMap, err := s.neo.GetModels(ctx, datasetId, organizationId)
+	if err != nil {
+		log.Println(err)
+	}
 
+	sourceModel, inMap := modelMap[req.Model]
+	if inMap == false {
+		return nil, &models.UnknownModelError{Model: req.Model}
+	}
+
+	// Use default ordering unless specifically defined
+	orderBy := req.OrderBy
+	if orderBy == "" {
+		orderBy = "`@sort_key`"
+	} else {
+		//	Check if provided value is valid.
+		modelProps, err := s.neo.GetModelProps(ctx, datasetId, organizationId, req.Model)
+		if err != nil {
+			return nil, err
+		}
+
+		propFound := false
+		for _, v := range modelProps {
+			if v.Name == req.OrderBy {
+				orderBy = req.OrderBy
+				propFound = true
+				break
+			}
+		}
+
+		if !propFound {
+			return nil, &models.UnknownModelPropertyError{PropName: req.OrderBy}
+		}
+	}
+
+	targetModels, err := getTargetModelsMap(req.Filters, sourceModel, modelMap)
+	if err != nil {
+		log.Error("Error getting the target models: ", err)
+		return nil, err
+	}
+
+	shortestPaths, err := s.neo.ShortestPath(ctx, sourceModel, targetModels)
+	if err != nil {
+		log.Error("Error getting shortest paths: ", err)
+		return nil, err
+	}
+
+	//TODO: Run following two queries in parallel
+	nodes, err := s.neo.Query(ctx, sourceModel, shortestPaths, req.Filters, orderBy, req.Limit, req.Offset)
 	if err != nil {
 		return nil, err
 	}
 
-	return nodes, nil
+	total, err := s.neo.QueryTotal(ctx, sourceModel, shortestPaths, req.Filters, orderBy, req.Limit, req.Offset)
+	if err != nil {
+		return nil, err
+	}
+
+	res := query.QueryResponse{
+		ModelName: req.Model,
+		Limit:     req.Limit,
+		Offset:    req.Offset,
+		Total:     total,
+		Records:   nodes,
+	}
+
+	return &res, nil
 }
 
-func (s *ModelServiceStore) Autocomplete(ctx context.Context, parsedRequestBody models.AutocompleteRequestBody, datasetId int,
+func (s *ModelServiceStore) Autocomplete(ctx context.Context, parsedRequestBody query.AutocompleteRequestBody, datasetId int,
 	organizationId int) ([]string, error) {
 
 	values, err := s.neo.Autocomplete(ctx, datasetId, organizationId, parsedRequestBody)

@@ -8,6 +8,7 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j/dbtype"
 	"github.com/pennsieve/model-service-serverless/api/models"
+	"github.com/pennsieve/model-service-serverless/api/models/query"
 	"github.com/pennsieve/model-service-serverless/api/shared"
 	"github.com/pennsieve/pennsieve-go-core/pkg/models/packageInfo"
 	"github.com/pennsieve/pennsieve-go-core/pkg/models/packageInfo/packageState"
@@ -236,7 +237,7 @@ func testCreateQuery(t *testing.T, _ *ModelServiceStore) {
 	}
 
 	// Example of query filters
-	filters := []models.Filters{
+	filters := []query.Filters{
 		{
 			Model:    "patient",
 			Property: "name",
@@ -263,10 +264,15 @@ func testCreateQuery(t *testing.T, _ *ModelServiceStore) {
 		},
 	}
 
+	params := query.FormatParams{
+		ResultType:         query.RESULTS,
+		AutoCompleteParams: query.AutoCompleteParams{},
+	}
+
 	queryStr, err := generateQuery(models.Model{
 		ID:   "9609bfb8-c7a1-45d5-b683-de2e39788cc0",
 		Name: "samples",
-	}, paths, filters, "'@id'", false, "", "", 100, 0)
+	}, paths, filters, "'@id'", params, 100, 0)
 
 	if err != nil {
 		fmt.Println(err)

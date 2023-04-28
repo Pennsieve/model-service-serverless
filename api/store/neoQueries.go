@@ -7,6 +7,7 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j"
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j/dbtype"
 	"github.com/pennsieve/model-service-serverless/api/models"
+	"github.com/pennsieve/model-service-serverless/api/models/query"
 	"github.com/pennsieve/model-service-serverless/api/shared"
 	log "github.com/sirupsen/logrus"
 	"regexp"
@@ -254,59 +255,44 @@ func (q *NeoQueries) GetModelProps(ctx context.Context, datasetId int, organizat
 
 }
 
+// QueryTotal returns the total number of results for a particular query
+func (q *NeoQueries) QueryTotal(ctx context.Context, sourceModel models.Model, shortestPaths []dbtype.Path, filters []query.Filters,
+	orderBy string, limit int, offset int) (int, error) {
+
+	queryParams := query.FormatParams{ResultType: query.COUNT}
+
+	query, err := generateQuery(sourceModel, shortestPaths, filters, orderBy, queryParams, limit, offset)
+	if err != nil {
+		log.Error("Error generating query: ", err)
+		return 0, err
+	}
+
+	log.Debug("Query: ", query)
+
+	result, err := q.db.Run(ctx, query, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	record, err := result.Single(ctx)
+	if err != nil {
+		return 0, err
+	}
+	r, exists := record.Get("total")
+	if !exists {
+		return 0, errors.New("result does not contain property 'total'")
+	}
+
+	totalNrRecords := r.(int)
+	return totalNrRecords, nil
+}
+
 // Query returns an array of records based on a set of filters within a dataset
-func (q *NeoQueries) Query(ctx context.Context, datasetId int, organizationId int, req models.QueryRequestBody) ([]models.Record, error) {
+func (q *NeoQueries) Query(ctx context.Context, sourceModel models.Model, shortestPaths []dbtype.Path, filters []query.Filters,
+	orderBy string, limit int, offset int) ([]models.Record, error) {
 
-	modelMap, err := q.GetModels(ctx, datasetId, organizationId)
-	if err != nil {
-		log.Println(err)
-	}
-
-	sourceModel, inMap := modelMap[req.Model]
-	if inMap == false {
-		return nil, &models.UnknownModelError{Model: req.Model}
-	}
-
-	// Use default ordering unless specifically defined
-	orderBy := req.OrderBy
-	if orderBy == "" {
-		orderBy = "`@sort_key`"
-	} else {
-		//	Check if provided value is valid.
-		modelProps, err := q.GetModelProps(ctx, datasetId, organizationId, req.Model)
-		if err != nil {
-			return nil, err
-		}
-
-		propFound := false
-		for _, v := range modelProps {
-			if v.Name == req.OrderBy {
-				orderBy = req.OrderBy
-				propFound = true
-				break
-			}
-		}
-
-		if !propFound {
-			return nil, &models.UnknownModelPropertyError{PropName: req.OrderBy}
-		}
-	}
-
-	targetModels, err := getTargetModelsMap(req.Filters, sourceModel, modelMap)
-	if err != nil {
-		log.Error("Error getting the target models: ", err)
-		return nil, err
-	}
-
-	shortestPaths, err := q.ShortestPath(ctx, sourceModel, targetModels)
-	if err != nil {
-		log.Error("Error getting shortest paths: ", err)
-		return nil, err
-	}
-
-	log.Debug("Shortest Paths: ", shortestPaths)
-
-	query, err := generateQuery(sourceModel, shortestPaths, req.Filters, orderBy, false, "", "", req.Limit, req.Offset)
+	queryParams := query.FormatParams{ResultType: query.RESULTS}
+	query, err := generateQuery(sourceModel, shortestPaths, filters, orderBy, queryParams, limit, offset)
 	if err != nil {
 		log.Error("Error generating query: ", err)
 		return nil, err
@@ -333,7 +319,7 @@ func (q *NeoQueries) Query(ctx context.Context, datasetId int, organizationId in
 
 		newRec := models.Record{
 			ID:    id,
-			Model: req.Model,
+			Model: sourceModel.Name,
 			Props: node.Props,
 		}
 		records = append(records, newRec)
@@ -344,7 +330,7 @@ func (q *NeoQueries) Query(ctx context.Context, datasetId int, organizationId in
 }
 
 // Autocomplete returns a list of terms that match values given the specified filters for a property in a model
-func (q *NeoQueries) Autocomplete(ctx context.Context, datasetId int, organizationId int, req models.AutocompleteRequestBody) ([]string, error) {
+func (q *NeoQueries) Autocomplete(ctx context.Context, datasetId int, organizationId int, req query.AutocompleteRequestBody) ([]string, error) {
 
 	modelMap, err := q.GetModels(ctx, datasetId, organizationId)
 	if err != nil {
@@ -363,9 +349,17 @@ func (q *NeoQueries) Autocomplete(ctx context.Context, datasetId int, organizati
 
 	shortestPaths, err := q.ShortestPath(ctx, sourceModel, targetModels)
 
-	query, err := generateQuery(sourceModel, shortestPaths, req.Filters, orderBy, true, req.Text, req.Property, 20, 0)
+	params := query.FormatParams{
+		ResultType: query.AUTOCOMPLETE,
+		AutoCompleteParams: query.AutoCompleteParams{
+			Text:     req.Text,
+			PropName: req.Property,
+		},
+	}
 
-	log.Println(query)
+	query, err := generateQuery(sourceModel, shortestPaths, req.Filters, orderBy, params, 20, 0)
+
+	log.Debug(query)
 
 	result, err := q.db.Run(ctx, query, nil)
 	if err != nil {
@@ -626,7 +620,7 @@ func (q *NeoQueries) CreateRelationShips(ctx context.Context, datasetId int, org
 }
 
 // getTargetModelsMap returns a map between model name and model object
-func getTargetModelsMap(filters []models.Filters, sourceModel models.Model, modelMap map[string]models.Model) (map[string]string, error) {
+func getTargetModelsMap(filters []query.Filters, sourceModel models.Model, modelMap map[string]models.Model) (map[string]string, error) {
 
 	targetModels := make(map[string]string)
 	for _, v := range filters {
@@ -650,8 +644,8 @@ func getTargetModelsMap(filters []models.Filters, sourceModel models.Model, mode
 }
 
 // generateQuery returns a Cypher query based on the provided paths and filters.
-func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []models.Filters,
-	orderByProp string, autocomplete bool, autocompleteText string, autocompletePropName string, limit int, offset int) (string, error) {
+func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []query.Filters,
+	orderByProp string, formatParams query.FormatParams, limit int, offset int) (string, error) {
 
 	if orderByProp == "" {
 		return "", errors.New("orderBy cannot be empty")
@@ -750,7 +744,8 @@ func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []mode
 	}
 
 	// Return
-	if autocomplete {
+	switch formatParams.ResultType {
+	case query.AUTOCOMPLETE:
 		// Add autocomplete filter
 		if !firstWhereClause {
 			queryStr.WriteString("AND ")
@@ -758,10 +753,16 @@ func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []mode
 			queryStr.WriteString("WHERE ")
 		}
 
-		queryStr.WriteString(fmt.Sprintf("%s.%s =~ '(?i).*%s.*' ", sourceModel.Name, autocompletePropName, autocompleteText))
-		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s.%s AS value LIMIT %d", sourceModel.Name, autocompletePropName, limit))
-	} else {
-		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s AS records ORDER BY %s.%s SKIP %d LIMIT %d", sourceModel.Name, sourceModel.Name, orderByProp, offset, limit))
+		queryStr.WriteString(fmt.Sprintf("%s.%s =~ '(?i).*%s.*' ", sourceModel.Name,
+			formatParams.AutoCompleteParams.PropName, formatParams.AutoCompleteParams.Text))
+		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s.%s AS value LIMIT %d",
+			sourceModel.Name, formatParams.AutoCompleteParams.PropName, limit))
+	case query.RESULTS:
+		queryStr.WriteString(fmt.Sprintf("RETURN DISTINCT %s AS records ORDER BY %s.%s SKIP %d LIMIT %d",
+			sourceModel.Name, sourceModel.Name, orderByProp, offset, limit))
+	case query.COUNT:
+		queryStr.WriteString(fmt.Sprintf("RETURN count(distinct %s) AS total", sourceModel.Name))
+
 	}
 
 	return queryStr.String(), nil
