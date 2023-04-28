@@ -22,7 +22,7 @@ type QueryResponse struct {
 	Limit     int             `json:"limit"`
 	Offset    int             `json:"offset"`
 	Total     int             `json:"total"s`
-	Records   []models.Record `json:"filters"`
+	Records   []models.Record `json:"records"`
 }
 
 type AutocompleteRequestBody struct {
