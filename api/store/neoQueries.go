@@ -656,9 +656,9 @@ func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []quer
 	queryStr.WriteString("MATCH ")
 
 	// Iterate over all shortest paths
-	setRestart := false
 	if len(paths) > 0 {
 		for iPath, p := range paths {
+			setRestart := true
 
 			// Iterate over all nodes within a single path
 			for pathIndex := range p.Nodes {
@@ -668,23 +668,28 @@ func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []quer
 				if iPath == 0 {
 
 					if pathIndex == 0 {
+						// In first node of first path --> link node to model
+
 						curRel := p.Relationships[pathIndex]
 						queryStr.WriteString(fmt.Sprintf("(M%s:Model{id:'%s'})<-[:`@INSTANCE_OF`]-(%s:Record)-[:%s]-",
 							curNode.Props["name"], curNode.Props["id"], curNode.Props["name"], curRel.Props["type"]))
 					} else {
 						if pathIndex <= len(p.Relationships)-1 {
+							// In waypoint in first path --> set waypoint
+
 							curRel := p.Relationships[pathIndex]
 							queryStr.WriteString(fmt.Sprintf("(%s:Record)-[:%s]-", curNode.Props["name"], curRel.Props["type"]))
 						} else {
+							// In final node of first path --> link node to model
+
 							queryStr.WriteString(fmt.Sprintf("(%s:Record)-[:`@INSTANCE_OF`]->(M%s:Model{id:'%s'}) ",
 								p.Nodes[len(p.Nodes)-1].Props["name"], p.Nodes[len(p.Nodes)-1].Props["name"], p.Nodes[len(p.Nodes)-1].Props["id"]))
-							setRestart = true
 						}
 					}
 
 				} else {
 
-					// Iterate over previous paths to check if the current node is already includeded in the graph-query.
+					// Iterate over previous paths to check if the current node is already included in the graph-query.
 					// We can do this because the paths all start from the same model, and the shortest route to any node
 					// does not change between paths.
 					pathElExists := false
@@ -706,15 +711,22 @@ func generateQuery(sourceModel models.Model, paths []dbtype.Path, filters []quer
 					// If the node does not exist in the query, include the element. AND
 					// if this is the first element of a new path, then start at the last known element.
 					if !pathElExists {
+
 						// In case this is the first node in the path, include the last previously known node as the starting point.
 						if setRestart {
-							queryStr.WriteString(fmt.Sprintf(", (%s:Record)-[:%s]-", p.Nodes[len(p.Nodes)-2].Props["name"], p.Relationships[len(p.Nodes)-2].Props["type"]))
+							// In first unknown node of subsequent path (should not be first node in path)
+							queryStr.WriteString(fmt.Sprintf(", (%s:Record)-[:%s]-", p.Nodes[pathIndex-1].Props["name"], p.Relationships[pathIndex-1].Props["type"]))
+							setRestart = false
 						}
 
 						// Check if this is the final node, or if this is a waypoint.
 						if pathIndex == len(p.Relationships) {
+							// In final node of subsequent path
+
 							queryStr.WriteString(fmt.Sprintf("(%s:Record) ", p.Nodes[len(p.Nodes)-1].Props["name"]))
 						} else {
+							// In waypoint of subsequent path
+
 							curRel := p.Relationships[pathIndex]
 							queryStr.WriteString(fmt.Sprintf("(%s:Record)-[:%s]-", curNode.Props["name"], curRel.Props["type"]))
 						}

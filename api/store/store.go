@@ -79,6 +79,11 @@ func (s *ModelServiceStore) CreateModelTx(ctx context.Context, datasetId int, or
 
 }
 
+// UpdateModelPropertiesTx adds or replaces properties in a Model
+func (s *ModelServiceStore) UpdateModelPropertiesTx(ctx context.Context) {
+
+}
+
 func (s *ModelServiceStore) GetDatasetModels(ctx context.Context, datasetId int, organizationId int) ([]models.Model, error) {
 	// Get the models from Neo4J
 	results, err := s.neo.GetModels(ctx, datasetId, organizationId)
