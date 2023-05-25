@@ -207,6 +207,8 @@ func (s *ModelServiceStore) GetRecordsForPackage(ctx context.Context, datasetId 
 		return nil, err
 	}
 
+	log.Debug("Package Ancestors: length: ", len(packages))
+
 	var packageIds []int
 	for _, p := range packages {
 		packageIds = append(packageIds, int(p.Id))

@@ -380,6 +380,8 @@ func (q *NeoQueries) Autocomplete(ctx context.Context, datasetId int, organizati
 	return values, nil
 }
 
+//func (q *NeoQueries) AutocompleteModels(ctx context.Context, datasetId int, organizationId int)
+
 // ShortestPath returns the shortest paths between source model and the target models
 func (q *NeoQueries) ShortestPath(ctx context.Context, sourceModel models.Model, targetModels map[string]string) ([]dbtype.Path, error) {
 
@@ -434,6 +436,8 @@ func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, or
 		fmt.Sprintf("[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(:Dataset{id: %d })-[:`@IN_ORGANIZATION`]->(:Organization{id: %d }) ", datasetId, organizationId) +
 		fmt.Sprintf("WHERE p.package_id IN [%s] RETURN DISTINCT r as records ,m.name as model, {node_id:p.package_node_id, id:p.package_id} AS origin", ancestorIds)
 
+	log.Debug("Get metadata for Package: ", cql)
+
 	result, err := q.db.Run(ctx, cql, nil)
 
 	if err != nil {
@@ -481,6 +485,8 @@ func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, or
 		records = append(records, newRec)
 
 	}
+
+	log.Debug("Returned number of records: ", len(records))
 
 	return records, nil
 }
