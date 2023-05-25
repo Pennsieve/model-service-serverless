@@ -418,12 +418,6 @@ func (q *NeoQueries) ShortestPath(ctx context.Context, sourceModel models.Model,
 
 // GetRecordsForPackage returns a list of connected records
 func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, organizationId int, packageIds []int, maxDepth int) ([]models.PackageMetadata, error) {
-	// MATCH p = (n:Package{package_node_id:'N:package:ab16ccc2-c5a5-4ead-a476-bc3f6e919364'})<-[*0..5]-(b:Record)-[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(:Dataset)-[:`@IN_ORGANIZATION`]->(:Organization) RETURN DISTINCT b as records ,m.name as models
-
-	//cql := fmt.Sprintf("MATCH (p:Package{package_node_id:'%s'})-[:`@IN_PACKAGE`]-(a:Record)", packageNodeId) +
-	//	fmt.Sprintf("<-[*0..%d]-(r:Record)--(m:Model)", maxDepth) +
-	//	fmt.Sprintf("-[:`@IN_DATASET`]->(:Dataset { id: %d })-[:`@IN_ORGANIZATION`]->(:Organization { id: %d }) ", datasetId, organizationId) +
-	//	"RETURN DISTINCT r as records ,m.name as model"
 
 	var IDs []string
 	for _, i := range packageIds {
@@ -431,12 +425,14 @@ func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, or
 	}
 	ancestorIds := strings.Join(IDs, ",")
 
+	log.Debug("GetRecordsForPackage: AncestorIds: ", ancestorIds)
+
 	cql := "" +
 		fmt.Sprintf("MATCH (p:Package)<-[*0..%d]-(r:Record)-", maxDepth) +
 		fmt.Sprintf("[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(:Dataset{id: %d })-[:`@IN_ORGANIZATION`]->(:Organization{id: %d }) ", datasetId, organizationId) +
 		fmt.Sprintf("WHERE p.package_id IN [%s] RETURN DISTINCT r as records ,m.name as model, {node_id:p.package_node_id, id:p.package_id} AS origin", ancestorIds)
 
-	log.Debug("Get metadata for Package: ", cql)
+	log.Debug("GetRecordsForPackage: CQL: ", cql)
 
 	result, err := q.db.Run(ctx, cql, nil)
 
