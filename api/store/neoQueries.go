@@ -429,11 +429,21 @@ func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, or
 
 	cql := "" +
 		fmt.Sprintf("MATCH (ds:Dataset{id: %d})-[:`@IN_ORGANIZATION`]->(:Organization{id: %d }) ", datasetId, organizationId) +
-		"WITH collect(ds) as dataset " +
-		fmt.Sprintf("MATCH (p:Package)<-[*0..%d]-(r:Record)-", maxDepth) +
-		"[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(ds)" +
-		fmt.Sprintf("WHERE p.package_id IN [%s] RETURN DISTINCT r as records ,m.name as model, {node_id:p.package_node_id, id:p.package_id} AS origin", ancestorIds)
+		" WITH ds LIMIT 1 " +
+		fmt.Sprintf("MATCH (p:Package)-[:`@IN_DATASET`]->(ds) WHERE p.package_id IN [%s] ", ancestorIds) +
+		"WITH DISTINCT p " +
+		fmt.Sprintf("MATCH (p)<-[*1..%d]-(r:Record)-[:`@INSTANCE_OF`]->(m:Model)", maxDepth) +
+		"RETURN DISTINCT r as records ,m.name as model, {node_id:p.package_node_id, id:p.package_id} AS origin"
 
+	// NOTE: THIS DOES NOT ACTUALLY CHECK FOR THE DS, IT ACTUALLY WORKS AS THE ANCESTOR IDS ARE ALREADY SCOPED TO THE DS
+	//cql := "" +
+	//	fmt.Sprintf("MATCH (ds:Dataset{id: %d})-[:`@IN_ORGANIZATION`]->(:Organization{id: %d }) ", datasetId, organizationId) +
+	//	"WITH DISTINCT ds " +
+	//	fmt.Sprintf("MATCH (p:Package)<-[*0..%d]-(r:Record)-", maxDepth) +
+	//	"[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(ds)" +
+	//	fmt.Sprintf("WHERE p.package_id IN [%s] RETURN DISTINCT r as records ,m.name as model, {node_id:p.package_node_id, id:p.package_id} AS origin", ancestorIds)
+
+	// NOTE: THIS IS SUPER SLOW
 	//cql := "" +
 	//	fmt.Sprintf("MATCH (p:Package)<-[*0..%d]-(r:Record)-", maxDepth) +
 	//	fmt.Sprintf("[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(:Dataset{id: %d })-[:`@IN_ORGANIZATION`]->(:Organization{id: %d }) ", datasetId, organizationId) +
