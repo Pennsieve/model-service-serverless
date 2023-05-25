@@ -428,9 +428,16 @@ func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, or
 	log.Debug("GetRecordsForPackage: AncestorIds: ", ancestorIds)
 
 	cql := "" +
+		fmt.Sprintf("MATCH (ds:Dataset{id: %d}-[:`@IN_ORGANIZATION`]->(:Organization{id: %d }) ", datasetId, organizationId) +
+		"WITH collect(ds) as dataset " +
 		fmt.Sprintf("MATCH (p:Package)<-[*0..%d]-(r:Record)-", maxDepth) +
-		fmt.Sprintf("[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(:Dataset{id: %d })-[:`@IN_ORGANIZATION`]->(:Organization{id: %d }) ", datasetId, organizationId) +
+		"[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(ds)" +
 		fmt.Sprintf("WHERE p.package_id IN [%s] RETURN DISTINCT r as records ,m.name as model, {node_id:p.package_node_id, id:p.package_id} AS origin", ancestorIds)
+
+	//cql := "" +
+	//	fmt.Sprintf("MATCH (p:Package)<-[*0..%d]-(r:Record)-", maxDepth) +
+	//	fmt.Sprintf("[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(:Dataset{id: %d })-[:`@IN_ORGANIZATION`]->(:Organization{id: %d }) ", datasetId, organizationId) +
+	//	fmt.Sprintf("WHERE p.package_id IN [%s] RETURN DISTINCT r as records ,m.name as model, {node_id:p.package_node_id, id:p.package_id} AS origin", ancestorIds)
 
 	log.Debug("GetRecordsForPackage: CQL: ", cql)
 
