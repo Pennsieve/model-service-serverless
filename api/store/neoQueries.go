@@ -428,7 +428,7 @@ func (q *NeoQueries) GetRecordsForPackage(ctx context.Context, datasetId int, or
 	log.Debug("GetRecordsForPackage: AncestorIds: ", ancestorIds)
 
 	cql := "" +
-		fmt.Sprintf("MATCH (ds:Dataset{id: %d}-[:`@IN_ORGANIZATION`]->(:Organization{id: %d }) ", datasetId, organizationId) +
+		fmt.Sprintf("MATCH (ds:Dataset{id: %d})-[:`@IN_ORGANIZATION`]->(:Organization{id: %d }) ", datasetId, organizationId) +
 		"WITH collect(ds) as dataset " +
 		fmt.Sprintf("MATCH (p:Package)<-[*0..%d]-(r:Record)-", maxDepth) +
 		"[:`@INSTANCE_OF`]->(m:Model)-[:`@IN_DATASET`]->(ds)" +
