@@ -20,6 +20,7 @@
 
 # Lambda Binaries Zip files
 lambda/bin/*.zip
+/lambda/bin/
 
 # Mac
 .DS_Store
@@ -32,4 +33,3 @@ api/vendor/
 plugins
 data
 conf
-plugins

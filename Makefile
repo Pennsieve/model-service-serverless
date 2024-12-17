@@ -1,4 +1,4 @@
-.PHONY: help clean test test-ci package publish start-neo4j-empty
+.PHONY: help clean test test-ci package publish start-neo4j-empty package-clean
 
 LAMBDA_BUCKET ?= "pennsieve-cc-lambda-functions-use1"
 WORKING_DIR   ?= "$(shell pwd)"
@@ -21,19 +21,19 @@ help:
 
 # Start a clean NEO4J container for local testing
 start-neo4j-empty: docker-clean install-apoc
-	docker-compose -f docker-compose.test.yml --compatibility up neo4j
+	docker compose -f docker-compose.test.yml --compatibility up neo4j
 
 # Run dockerized tests (can be used locally)
 test:
-	docker-compose -f docker-compose.test.yml down --remove-orphans
+	docker compose -f docker-compose.test.yml down --remove-orphans
 	mkdir -p data conf
 	chmod -R 777 data conf
-	docker-compose -f docker-compose.test.yml up --exit-code-from local_tests local_tests
+	docker compose -f docker-compose.test.yml up --exit-code-from local_tests local_tests
 	make clean
 
 # Run dockerized tests (used on Jenkins)
 test-ci: install-apoc
-	docker-compose -f docker-compose.test.yml down --remove-orphans
+	docker compose -f docker-compose.test.yml down --remove-orphans
 	mkdir -p data plugins conf logs
 	chmod -R 777 conf
 	@IMAGE_TAG=$(IMAGE_TAG) docker-compose -f docker-compose.test.yml up --exit-code-from=ci-tests ci-tests
@@ -46,7 +46,7 @@ clean: docker-clean
 
 # Spin down active docker containers.
 docker-clean:
-	docker-compose -f docker-compose.test.yml down
+	docker compose -f docker-compose.test.yml down
 
 # Installing apoc plugin for NEO4J database
 install-apoc:
@@ -68,6 +68,9 @@ package:
   		env GOOS=linux GOARCH=amd64 go build -o $(WORKING_DIR)/lambda/bin/modelService/model_service; \
 		cd $(WORKING_DIR)/lambda/bin/modelService/ ; \
 			zip -r $(WORKING_DIR)/lambda/bin/modelService/$(PACKAGE_NAME) .
+
+package-clean:
+	rm -fR $(WORKING_DIR)/lambda/bin
 
 # Copy Service lambda to S3 location
 publish:
