@@ -1,6 +1,8 @@
 module github.com/pennsieve/model-service-serverless/api
 
-go 1.18
+go 1.22
+
+toolchain go1.23.4
 
 require (
 	github.com/google/uuid v1.3.0
