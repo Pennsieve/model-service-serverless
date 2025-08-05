@@ -76,7 +76,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 	graphStore := store.NewModelServiceStore(db, neoDb)
 
 	switch routeKey {
-	case "/metadata/models":
+	case "/metadata_legacy/models":
 		switch request.RequestContext.HTTP.Method {
 		case "GET":
 			//	Return all models for a specific dataset
@@ -84,14 +84,14 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 				apiResponse, err = getDatasetModelsRoute(graphStore, request, claims)
 			}
 		}
-	case "/metadata/query":
+	case "/metadata_legacy/query":
 		switch request.RequestContext.HTTP.Method {
 		case "POST":
 			if authorized = authorizer.HasRole(*claims, permissions.ViewRecords); authorized {
 				apiResponse, err = postGraphQueryRoute(graphStore, request, claims)
 			}
 		}
-	case "/metadata/query/autocomplete":
+	case "/metadata_legacy/query/autocomplete":
 		switch request.RequestContext.HTTP.Method {
 		case "POST":
 			if authorized = authorizer.HasRole(*claims, permissions.ViewRecords); authorized {
@@ -99,7 +99,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 			}
 		}
 
-	case "/metadata/records/relationships":
+	case "/metadata_legacy/records/relationships":
 		switch request.RequestContext.HTTP.Method {
 		case "POST":
 			if authorized = authorizer.HasRole(*claims, permissions.CreateDeleteRecord); authorized {
@@ -107,7 +107,7 @@ func ModelServiceHandler(request events.APIGatewayV2HTTPRequest) (*events.APIGat
 			}
 		}
 
-	case "/metadata/package":
+	case "/metadata_legacy/package":
 		switch request.RequestContext.HTTP.Method {
 		case "GET":
 			//	Return all models for a specific dataset
