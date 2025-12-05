@@ -14,7 +14,7 @@ require (
 	github.com/neo4j/neo4j-go-driver/v5 v5.0.0
 	github.com/pennsieve/model-service-serverless/api v0.0.0-20220914184935-9edde63a7b08
 	github.com/pennsieve/pennsieve-go-core v1.13.0
-	github.com/sirupsen/logrus v1.9.0
+	github.com/sirupsen/logrus v1.9.1
 )
 
 require (
