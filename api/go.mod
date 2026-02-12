@@ -7,7 +7,7 @@ toolchain go1.23.4
 require (
 	github.com/google/uuid v1.3.0
 	github.com/neo4j/neo4j-go-driver/v5 v5.0.0
-	github.com/pennsieve/pennsieve-go-core v1.13.0
+	github.com/pennsieve/pennsieve-go-core v1.13.7
 	github.com/sirupsen/logrus v1.9.0
 )
 
